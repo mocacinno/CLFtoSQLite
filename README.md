@@ -28,6 +28,8 @@ It's a go program, vendoring included... just clone it, verify the sourcecode, b
 * go
 * linux (eventough it should also be compileable on windows)
 * apache combined logs
+* space... Usually your logfiles will be rotated and gzipped. I'll be unpacking them and putting them into a relational database (which produces some more overhead). For every ~70 Mb of UNCOMPRESSED logs, you'll need about 100Mb of diskspace
+* time. Eventough compiled go runs pretty fast :smile:. The initial testload of about ~70 Mb of logfiles took about 40 seconds on my old XEON dedicated server. That's about 1 second per 2 Mb of logfiles. Subsequent loads will mostly skip already loaded files and it'll skip records that are older than the newest timestamp in the db of changed logfiles.
 
 ### Installation
 
@@ -56,13 +58,13 @@ It's a go program, vendoring included... just clone it, verify the sourcecode, b
 1. build the sqlite database and fill it. You need to run this tool every time you want to load the ascii logs into the sqlite database for analysis/graphing
 
    ```sh
-   ./logparser
+   ./logparser -config config.ini
    ```
 
 1. run the stats
 
    ```sh
-   ./stats
+   ./stats -config config.ini
    ```
 
 ## Roadmap
