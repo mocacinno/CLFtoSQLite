@@ -246,8 +246,8 @@ func prepstatements(tx *sql.Tx, args args) map[string]*sql.Stmt {
 	query_allvisits_detailed += " from visit, user, request, referrer "
 	query_allvisits_detailed += " where visit.referrer = referrer.id and visit.request = request.id and visit.user = user.id "
 	query_allvisits_detailed += " and visit_timestamp > ? "
-	query_allvisits_detailed += " order by visit_timestamp desc limit " + strconv.Itoa(args.max_rows_in_table)
-	fmt.Printf("%s", query_allvisits_detailed)
+	query_allvisits_detailed += " order by visit_timestamp desc "
+	//fmt.Printf("%s", query_allvisits_detailed)
 	stmt_allvisits_detailed, err := tx.Prepare(query_allvisits_detailed)
 	if err != nil {
 		fmt.Printf("%s\n", err.Error())
@@ -262,6 +262,7 @@ func getdetailedstats(args args, prepdb map[string]*sql.Stmt) bool {
 	nu := int(time.Now().Unix())
 	vanaf := nu - (args.number_of_days_detailed * 86400)
 	MyHeaders := map[string]string{
+		"Title_0": "nb",
         "Title_1": "timestamp",
 		"Title_1b": "request",
         "Title_2": "referrer",
@@ -283,8 +284,9 @@ func getdetailedstats(args args, prepdb map[string]*sql.Stmt) bool {
 				fmt.Printf("%s\n", err.Error())
 			}
 			defer rows.Close()
-
+			rownum := 0
 			for rows.Next() {
+				rownum = rownum + 1
 				var visit_id, visit_day, visit_month, visit_year, visit_hour, visit_minute, visit_second, visit_timestamp, visit_statuscode, visit_httpsize int
 				var referrer, request, user_ip, user_agent string
 				if err := rows.Scan(&visit_id, &referrer, &request,&visit_day, &visit_month, &visit_year,&visit_hour, &visit_minute, &visit_second,&visit_timestamp, &user_ip, &user_agent, &visit_statuscode ,&visit_httpsize); err != nil {
@@ -315,9 +317,10 @@ func getdetailedstats(args args, prepdb map[string]*sql.Stmt) bool {
 						ignore = true
 					}
 				}
-				if (ignore == false ){
+				if (ignore == false && rownum <= args.max_rows_in_table){
 					//fmt.Printf("visit_id : %d, referrer: %s, request: %s,visit_day: %d, visit_month: %d, visit_year: %d,visit_hour : %d, visit_minute: %d, visit_second: %d,visit_timestamp: %d, user_ip: %s, user_agent: %s,visit_statuscode: %d,visit_httpsize%d\n\n", visit_id, referrer, request,visit_day, visit_month, visit_year,visit_hour, visit_minute, visit_second,visit_timestamp, user_ip, user_agent,visit_statuscode,visit_httpsize)
 					MyData := map[string]string{
+						"Value_0": strconv.Itoa(rownum),
 						"Value_1":  strconv.Itoa(visit_day) + "/" + strconv.Itoa(visit_month) + "/" + strconv.Itoa(visit_year) + " " + strconv.Itoa(visit_hour) + ":" + strconv.Itoa(visit_minute) + ":" + strconv.Itoa(visit_second),
 						"Value_1b": request,
 						"Value_2": referrer,
