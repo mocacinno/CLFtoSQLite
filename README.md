@@ -14,6 +14,10 @@ In the open source world, i ended up with 3 choices:
 all other tools seem to be worthless or paying. And those 3 were either allmost unmaintained, or not really what i wanted.  
 So i tought to myself: why not add one more :smile:
 
+## Visual schema
+
+![visual schema of data flow](clftosqlite.jpg "visual schema of data flow")
+
 ### Built With
 
 golang
