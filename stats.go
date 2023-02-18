@@ -20,19 +20,27 @@ import (
 	//	"github.com/wcharczuk/go-chart/drawing"
 )
 
-/*
-t := template.Must(template.New("").Parse(`<table>{{range .}}<tr><td>{{.}}</td></tr>{{end}}</table>`))
-names := []string{"john", "jim"}
-if err := t.Execute(os.Stdout, names); err != nil {
-  log.Fatal(err)
-}
-*/
-
 type Table struct {
 	Pagetitle   string
 	Pagedescription   string
 	Headers map[string]string
 	Data []map[string]string
+}
+
+Type Visit struct {
+	id int
+	referrer string
+	request string
+	timestamp int
+	statuscode int
+	httpsize int
+}
+
+Type Visitor struct {
+	visitor_id int
+	ip string
+	useragent string
+	visit []Visit
 }
 
 const table_tmpl = `<!DOCTYPE html>
