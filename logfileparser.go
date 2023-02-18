@@ -23,6 +23,11 @@ type args struct {
 	padname    string
 	dbname     string
 	timeformat string
+	ignoredips []string
+	ignoredhostagents []string
+	ignoredreferrers []string
+	ignoredrequests []string
+	mydomain string
 }
 
 func parseargs() args {
@@ -30,10 +35,19 @@ func parseargs() args {
 	filesPtr := flag.String("files", `.*\.log.*\.gz`, "REGEX of the files to include")
 	dbnamePtr := flag.String("dbname", `apachelog.db`, "name of the database to use")
 	configfilePtr := flag.String("config", `none`, "complete path to the config file")
+	mydomainPtr := flag.String("mydomain", `localhost.local`, "your domain name, so it doesn't show up as refferer")
 	timeformatPtr := flag.String("timeformat", `02/Jan/2006:15:04:05 +0100`, "the timeformat to use for parsing")
+	ignorehostagents := flag.String("ignore_hostagents", `.*google.*`, "ignore this hostagent. If you want to ignore multipe hostagents: use a configfile!")
+	ignoredreferrers := flag.String("ignore_referrers", `.*localhost.*`, "ignore this referrer. If you want to ignore multipe referrers: use a configfile!")
+	ignorevisitorips := flag.String("ignore_visitor_ips", `^127\.0\.0\1$`, "ignore this ip. If you want to ignore multipe ips: use a configfile!")
+	ignoredrequests := flag.String("ignore_requests", `robots\.txt$`, "ignore this request. If you want to ignore multipe requests: use a configfile!")
+
 	helpwithRegexPtr := flag.Bool("helpwithregex", false, "show regex examples and exit")
 	flag.Parse()
-
+	var ignorevisitorips_list []string
+	var ignorehostagents_list []string
+	var ignoredreferrers_list []string
+	var ignoredrequests_list []string
 	flag_configfile := *configfilePtr
 	helpwithRegex := *helpwithRegexPtr
 	if helpwithRegex {
@@ -56,12 +70,41 @@ func parseargs() args {
 		output.padname = cfg.Section("parser").Key("pad").String()
 		output.dbname = cfg.Section("general").Key("dbfilepath").String()
 		output.timeformat = cfg.Section("general").Key("timeformat").String()
+		output.mydomain = cfg.Section("general").Key("mydomain").String()
+		for _, ignoredip := range cfg.Section("ignorevisitorips").Keys() {
+			ignorevisitorips_list = append(ignorevisitorips_list, ignoredip.String())
+		}
+		output.ignoredips = ignorevisitorips_list
+
+		for _, ignoredhostagent := range cfg.Section("ignorehostagents").Keys() {
+			ignorehostagents_list = append(ignorehostagents_list, ignoredhostagent.String())
+		}
+		output.ignoredhostagents = ignorehostagents_list
+
+		for _, ignoredreferrer := range cfg.Section("ignorereferrers").Keys() {
+			ignoredreferrers_list = append(ignoredreferrers_list, ignoredreferrer.String())
+		}
+		output.ignoredreferrers = ignoredreferrers_list
+
+		for _, ignoredrequest := range cfg.Section("ignoredrequests").Keys() {
+			ignoredrequests_list = append(ignoredrequests_list, ignoredrequest.String())
+		}
+		output.ignoredrequests = ignoredrequests_list
 
 	} else {
 		output.filename = *filesPtr
 		output.padname = *padPtr
 		output.dbname = *dbnamePtr
 		output.timeformat = *timeformatPtr
+		output.mydomain = *mydomainPtr
+		ignorevisitorips_list = append(ignorevisitorips_list, *ignorevisitorips)
+		output.ignoredips = ignorevisitorips_list
+		ignorehostagents_list = append(ignorehostagents_list, *ignorehostagents)
+		output.ignoredhostagents = ignorehostagents_list
+		ignoredreferrers_list = append(ignoredreferrers_list, *ignoredreferrers)
+		output.ignoredreferrers = ignoredreferrers_list
+		ignoredrequests_list = append(ignoredrequests_list, *ignoredrequests)
+		output.ignoredrequests = ignoredrequests_list
 	}
 
 	return output
@@ -135,10 +178,10 @@ func getfiles(regex string, pathS string, prepdb map[string]*sql.Stmt) []string 
 	return files
 }
 
-func parseme(line string, prepdb map[string]*sql.Stmt, maxvisittimestamp int, timeformat string) bool {
+func parseme(line string, prepdb map[string]*sql.Stmt, maxvisittimestamp int, timeformat string, args args) bool {
 	re := regexp.MustCompile(`(?m)^(\S*).*\[(.*)\]\s"(\S*)\s(\S*)\s([^"]*)"\s(\S*)\s(\S*)\s"([^"]*)"\s"([^"]*)"$`)
 	match := re.FindStringSubmatch(line)
-	if len(match) == 10 {
+	if len(match) == 10 { 
 		ip := match[1]
 		datumtijd := match[2]
 		method := match[3]
@@ -148,7 +191,35 @@ func parseme(line string, prepdb map[string]*sql.Stmt, maxvisittimestamp int, ti
 		httpsize := match[7]
 		referrer := match[8]
 		useragent := match[9]
-		insertrow(prepdb, ip, datumtijd, method, request, httpversion, returncode, httpsize, referrer, useragent, maxvisittimestamp, timeformat)
+		ignore := false
+				for _, ignoredhostagent := range args.ignoredhostagents {
+					r, err := regexp.MatchString(ignoredhostagent, useragent)
+					if err == nil && r {
+						ignore = true
+					}
+				}
+				for _, ignoredip := range args.ignoredips {
+					r, err := regexp.MatchString(ignoredip, ip)
+					if err == nil && r {
+						ignore = true
+					}
+				}
+				for _, ignoredreferrer := range args.ignoredreferrers {
+					r, err := regexp.MatchString(ignoredreferrer, referrer)
+					if err == nil && r {
+						ignore = true
+					}
+				}
+				for _, ignoredrequest := range args.ignoredrequests {
+					r, err := regexp.MatchString(ignoredrequest, request)
+					if err == nil && r {
+						ignore = true
+					}
+				}
+		if (ignore == false) {
+			insertrow(prepdb, ip, datumtijd, method, request, httpversion, returncode, httpsize, referrer, useragent, maxvisittimestamp, timeformat)
+		}
+		
 	} else {
 		fmt.Printf("unable to parse line %s %s", len(match), line)
 	}
@@ -446,7 +517,7 @@ func main() {
 		}
 		for scanner.Scan() {
 			currentline := scanner.Text()
-			parseme(currentline, prepdb, maxvisittimestamp, arguments.timeformat)
+			parseme(currentline, prepdb, maxvisittimestamp, arguments.timeformat, arguments)
 		}
 
 		InsertParsedFileHashIntoDb(filename, arguments.padname, prepdb)
