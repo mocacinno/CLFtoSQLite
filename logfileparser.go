@@ -125,7 +125,7 @@ func initialisedb(db *sql.DB) *sql.Tx {
 	querylist = append(querylist, "CREATE TABLE IF NOT EXISTS `request` (`id`    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,`request`       TEXT NOT NULL);")
 	querylist = append(querylist, "CREATE TABLE IF NOT EXISTS `referrer` (`id`    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,`referrer`      TEXT NOT NULL);")
 	querylist = append(querylist, "CREATE TABLE IF NOT EXISTS `alreadyloaded` (`id`    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,`hash`      TEXT NOT NULL);")
-	querylist = append(querylist, "CREATE TABLE IF NOT EXISTS `visit` ( 	`id`    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, 		`referrer`      INTEGER NOT NULL,		`request`       INTEGER NOT NULL, 		`visit_day` INTEGER NOT NULL, 		`visit_month` INTEGER NOT NULL, 		`visit_year` INTEGER NOT NULL, 		`visit_hour` INTEGER NOT NULL, 		`visit_minute` INTEGER NOT NULL, 		`visit_second`     INTEGER NOT NULL, 		`visit_timestamp` INTEGER NOT NULL, 		`user`  INTEGER NOT NULL, 		`statuscode`    INTEGER, 		`httpsize`      INTEGER, 		FOREIGN KEY(`request`) REFERENCES `request`(`id`),  FOREIGN KEY(`referrer`) REFERENCES `referrer`(`id`),  FOREIGN KEY(`user`) REFERENCES `user`(`id`) 	);")
+	querylist = append(querylist, "CREATE TABLE IF NOT EXISTS `visit` ( `id` INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,`referrer` INTEGER NOT NULL, `request` INTEGER NOT NULL, `visit_timestamp` INTEGER NOT NULL, `user`  INTEGER NOT NULL, `statuscode` INTEGER, `httpsize` INTEGER, FOREIGN KEY(`request`) REFERENCES `request`(`id`),  FOREIGN KEY(`referrer`) REFERENCES `referrer`(`id`),  FOREIGN KEY(`user`) REFERENCES `user`(`id`) 	);")
 	querylist = append(querylist, "CREATE INDEX IF NOT EXISTS user_ip_agent on user(ip,useragent);")
 	querylist = append(querylist, "CREATE INDEX IF NOT EXISTS request_request on request(request);")
 	querylist = append(querylist, "CREATE INDEX IF NOT EXISTS referrer_referrer on referrer(referrer);")
@@ -332,7 +332,7 @@ func prepstatements(tx *sql.Tx) map[string]*sql.Stmt {
 		visit table related statements
 	*/
 
-	query_insertvisit := "insert into visit(referrer, request, visit_day, visit_month, visit_year, visit_hour, visit_minute, visit_second, visit_timestamp, user, statuscode, httpsize) values (?,?,?,?,?,?,?,?,?,?,?,?)"
+	query_insertvisit := "insert into visit(referrer, request,  visit_timestamp, user, statuscode, httpsize) values (?,?,?,?,?,?)"
 	stmt_insertvisit, err := tx.Prepare(query_insertvisit)
 	if err != nil {
 		fmt.Printf("%s\n", err.Error())
@@ -363,10 +363,12 @@ func insertrow(prepdb map[string]*sql.Stmt, ip string, datumtijd string, method 
 		fmt.Printf("Can't parse time format")
 	}
 	epoch := thetime.Unix()
+	/*
 	visit_hour, visit_minute, visit_second := thetime.Clock()
 	visit_year := thetime.Year()
 	visit_month := thetime.Month()
 	visit_day := thetime.Day()
+	*/
 	//fmt.Printf("\nDEBUG: ik heb timestamp %s en verwacht formaat %s. Ik haal hieruit %d/%d/%d %d:%d:%d en maakte hiervan de unix timestamp %d\n", datumtijd, longForm, visit_day, visit_month, visit_year, visit_hour, visit_minute, visit_second, epoch)
 
 	if int(epoch) > maxtimestamp {
@@ -446,7 +448,7 @@ func insertrow(prepdb map[string]*sql.Stmt, ip string, datumtijd string, method 
 			get max timestamp of current db and insert newer records
 		*/
 		stmt_insertvisit := prepdb["stmt_insertvisit"]
-		stmt_insertvisit.Exec(referrerid, requestid, visit_day, visit_month, visit_year, visit_hour, visit_minute, visit_second, int(epoch), userid, returncode, httpsize)
+		stmt_insertvisit.Exec(referrerid, requestid,  int(epoch), userid, returncode, httpsize)
 	}
 
 }

@@ -250,7 +250,7 @@ func prepstatements(tx *sql.Tx, args args) map[string]*sql.Stmt {
 	/*
 	detailed info about all visits
 	*/
-	query_allvisits_detailed := " select visit.id as visit_id, referrer.referrer as referrer, request.request as request, visit.visit_day as visit_day, visit.visit_month as visit_month, visit.visit_year as visit_year, visit.visit_hour as visit_hour, visit.visit_minute as visit_minute, visit.visit_second as visit_second, visit.visit_timestamp as visit_timestamp, user.ip as user_ip, user.useragent as user_agent, visit.statuscode as visit_statuscode, visit.httpsize as visit_httpsize "
+	query_allvisits_detailed := " select visit.id as visit_id, referrer.referrer as referrer, request.request as request,   visit.visit_timestamp as visit_timestamp, user.ip as user_ip, user.useragent as user_agent, visit.statuscode as visit_statuscode, visit.httpsize as visit_httpsize "
 	query_allvisits_detailed += " from visit, user, request, referrer "
 	query_allvisits_detailed += " where visit.referrer = referrer.id and visit.request = request.id and visit.user = user.id "
 	query_allvisits_detailed += " and visit_timestamp > ? "
@@ -295,9 +295,9 @@ func getdetailedstats(args args, prepdb map[string]*sql.Stmt) bool {
 			rownum := 0
 			for rows.Next() {
 				rownum = rownum + 1
-				var visit_id, visit_day, visit_month, visit_year, visit_hour, visit_minute, visit_second, visit_timestamp, visit_statuscode, visit_httpsize int
+				var visit_id,  visit_timestamp, visit_statuscode, visit_httpsize int
 				var referrer, request, user_ip, user_agent string
-				if err := rows.Scan(&visit_id, &referrer, &request,&visit_day, &visit_month, &visit_year,&visit_hour, &visit_minute, &visit_second,&visit_timestamp, &user_ip, &user_agent, &visit_statuscode ,&visit_httpsize); err != nil {
+				if err := rows.Scan(&visit_id, &referrer, &request,&visit_timestamp, &user_ip, &user_agent, &visit_statuscode ,&visit_httpsize); err != nil {
 					fmt.Printf("%s\n", err.Error())
 				}
 				ignore := false
@@ -329,7 +329,7 @@ func getdetailedstats(args args, prepdb map[string]*sql.Stmt) bool {
 					//fmt.Printf("visit_id : %d, referrer: %s, request: %s,visit_day: %d, visit_month: %d, visit_year: %d,visit_hour : %d, visit_minute: %d, visit_second: %d,visit_timestamp: %d, user_ip: %s, user_agent: %s,visit_statuscode: %d,visit_httpsize%d\n\n", visit_id, referrer, request,visit_day, visit_month, visit_year,visit_hour, visit_minute, visit_second,visit_timestamp, user_ip, user_agent,visit_statuscode,visit_httpsize)
 					MyData := map[string]string{
 						"Value_0": strconv.Itoa(rownum),
-						"Value_1":  strconv.Itoa(visit_day) + "/" + strconv.Itoa(visit_month) + "/" + strconv.Itoa(visit_year) + " " + strconv.Itoa(visit_hour) + ":" + strconv.Itoa(visit_minute) + ":" + strconv.Itoa(visit_second),
+						"Value_1":  strconv.Itoa(visit_timestamp),
 						"Value_1b": request,
 						"Value_2": referrer,
 						"Value_3": user_ip,
