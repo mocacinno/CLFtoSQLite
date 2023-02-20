@@ -74,8 +74,8 @@ It's a go program, vendoring included... just clone it, verify the sourcecode, b
 
 ## Roadmap
 
-* [ ] stats uses a cursor to read data. I need to use a struct so i can re-use
-* [ ] I don't want to load all entries... I need to filter some entries out
+* [x] stats uses a cursor to read data. I need to use a struct so i can re-use
+* [x] I don't want to load all entries... I need to filter some entries out
 * [ ] stats needs graphs
 
 ## License
