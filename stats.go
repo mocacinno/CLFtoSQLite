@@ -44,6 +44,17 @@ type Visitor struct {
 	visit      []Visit
 }
 
+type timeseriesplot_html struct {
+	Title string
+	Img string
+	Description string
+}
+const timeseriesplot_tmpl = `
+<h1>{{.Title}}</h1>
+<p>{{.Description}}</p>
+<img src="{{.Img}}">
+`
+
 const table_tmpl = `<!DOCTYPE html>
 <html>
 	<head>
@@ -417,27 +428,58 @@ func overviewgraphs(args args, prepdb map[string]*sql.Stmt) bool {
 			fmt.Printf("%s\n", err.Error())
 		}
 		golangtime := time.Unix(int64(avgepoch),0)
-		//fmt.Printf("%s => %d\n", datum, aantalhits)
 		XValues = append(XValues, golangtime)
 		YValues = append(YValues, float64(aantalhits))
 	}
-	
+	gochart_drawtimeseries(XValues, YValues, args, "Number of hits", "Date", "NbHitsPerDay.png", "NbHitsPerDay.html", "Number of hits per day", "The number of raw hits per day")
+	return true
+}
+
+func gochart_drawtimeseries(XValues []time.Time, YValues []float64, args args, xtitle string, ytitle string, outputfilename_image string, outputfilename_html string, htmltitle string, description string) {
 	graph := chart.Chart{
-		XAxis: chart.XAxis{
-			ValueFormatter: chart.TimeHourValueFormatter,
-		},
 		Series: []chart.Series{
 			chart.TimeSeries{
 				XValues: XValues,
 				YValues: YValues,
 			},
 		},
+		XAxis: chart.XAxis{
+            Name:      xtitle,
+            NameStyle: chart.StyleShow(),
+            Style:     chart.StyleShow(),
+        },
+        YAxis: chart.YAxis{
+            Name:      ytitle,
+            NameStyle: chart.StyleShow(),
+            Style:     chart.StyleShow(),
+        },
 	}
 
-	f, _ := os.Create(args.outputpad + "NbHitsPerDay.png")
+	f, _ := os.Create(args.outputpad + outputfilename_image)
 	defer f.Close()
 	graph.Render(chart.PNG, f)
-	return true
+
+
+	myHtmlInput := timeseriesplot_html {
+		Title: htmltitle,
+		Img: outputfilename_image,
+		Description: description,
+	}
+	t, err := template.New("mytemplate").Parse(timeseriesplot_tmpl)
+	if err != nil {
+		panic(err)
+	}
+	var outputHTMLFile *os.File
+	if outputHTMLFile, err = os.Create(args.outputpad + outputfilename_html); err != nil {
+		panic(err)
+	}
+
+	if err = t.Execute(outputHTMLFile, myHtmlInput); err != nil {
+		panic(err)
+	}
+	defer outputHTMLFile.Close()
+
+
 }
 
 func main() {
@@ -463,5 +505,5 @@ func main() {
 	runtime.ReadMemStats(&memStats)
 	//fmt.Printf("runtime memstats end of proces %+v\n", memStats.Alloc)
 	//createBarChart()
-	drawdraw()
+	//drawdraw()
 }
