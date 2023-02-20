@@ -12,36 +12,36 @@ import (
 	"math/rand"
 	"os"
 	//_ "reflect"
-	"time"
-	"regexp"
 	"html/template"
+	"regexp"
 	"strconv"
+	"time"
 	//"log"
 	//	"github.com/wcharczuk/go-chart/drawing"
 )
 
 type Table struct {
-	Pagetitle   string
-	Pagedescription   string
-	Headers map[string]string
-	Data []map[string]string
+	Pagetitle       string
+	Pagedescription string
+	Headers         map[string]string
+	Data            []map[string]string
 }
 
 type Visit struct {
-	id int
-	referrer string
-	request string
-	timestamp int
+	id         int
+	referrer   string
+	request    string
+	timestamp  int
 	statuscode int
-	httpsize int
+	httpsize   int
 }
 
 type Visitor struct {
 	visitor_id int
-	ip string
-	useragent string
-	visit []Visit
-} 
+	ip         string
+	useragent  string
+	visit      []Visit
+}
 
 const table_tmpl = `<!DOCTYPE html>
 <html>
@@ -92,19 +92,19 @@ const table_tmpl = `<!DOCTYPE html>
 </html>`
 
 type args struct {
-	outputpad    string
-	dbpad string
-	max_rows_in_table int
-	number_of_days_detailed int
-	number_of_days_per_hour int
-	number_of_days_per_day int
-	number_of_days_per_week int
+	outputpad                string
+	dbpad                    string
+	max_rows_in_table        int
+	number_of_days_detailed  int
+	number_of_days_per_hour  int
+	number_of_days_per_day   int
+	number_of_days_per_week  int
 	number_of_days_per_month int
-	ignoredips []string
-	ignoredhostagents []string
-	ignoredreferrers []string
-	ignoredrequests []string
-	mydomain string
+	ignoredips               []string
+	ignoredhostagents        []string
+	ignoredreferrers         []string
+	ignoredrequests          []string
+	mydomain                 string
 }
 
 func drawdraw() {
@@ -148,7 +148,7 @@ func generateBarItems() []opts.BarData {
 	return items
 }
 
-func parseargs() (args) {
+func parseargs() args {
 	var output args
 	padPtr := flag.String("path", `./output`, "the output path")
 	dbnamePtr := flag.String("dbname", `apachelog.db`, "name of the database to use")
@@ -206,7 +206,7 @@ func parseargs() (args) {
 		output.ignoredrequests = ignoredrequests_list
 		//ignoredreferrers
 	} else {
-		output.outputpad =  *padPtr
+		output.outputpad = *padPtr
 		output.dbpad = *dbnamePtr
 		output.max_rows_in_table = *max_rows_in_tablePtr
 		output.number_of_days_detailed = *number_of_days_detailed
@@ -248,7 +248,7 @@ func initialisedb(db *sql.DB) *sql.Tx {
 func prepstatements(tx *sql.Tx, args args) map[string]*sql.Stmt {
 	listitems := make(map[string]*sql.Stmt)
 	/*
-	detailed info about all visits
+		detailed info about all visits
 	*/
 	query_allvisits_detailed := " select visit.id as visit_id, referrer.referrer as referrer, request.request as request,   visit.visit_timestamp as visit_timestamp, user.ip as user_ip, user.useragent as user_agent, visit.statuscode as visit_statuscode, visit.httpsize as visit_httpsize "
 	query_allvisits_detailed += " from visit, user, request, referrer "
@@ -270,82 +270,82 @@ func getdetailedstats(args args, prepdb map[string]*sql.Stmt) bool {
 	nu := int(time.Now().Unix())
 	vanaf := nu - (args.number_of_days_detailed * 86400)
 	MyHeaders := map[string]string{
-		"Title_0": "nb",
-        "Title_1": "timestamp",
+		"Title_0":  "nb",
+		"Title_1":  "timestamp",
 		"Title_1b": "request",
-        "Title_2": "referrer",
-        "Title_3": "user_ip",
-        "Title_4": "user_agent",
-        "Title_5": "visit_statuscode",
-        "Title_6": "visit_httpsize",
-    }
-	myTable := Table {
-		Pagetitle: "detailed visitor log",
-		Pagedescription: "this page shows a detailed log of all visits over the last " + strconv.Itoa(args.number_of_days_detailed) + " days",
-		Headers: MyHeaders,
-		Data: []map[string]string{},
+		"Title_2":  "referrer",
+		"Title_3":  "user_ip",
+		"Title_4":  "user_agent",
+		"Title_5":  "visit_statuscode",
+		"Title_6":  "visit_httpsize",
 	}
-	fmt.Printf("timestamp moet groter zijn dan %d - (%d * 86400) = %d\n" , nu, args.number_of_days_detailed, vanaf)
-			stmt_allvisits_detailed := prepdb["stmt_allvisits_detailed"]
-			rows, err := stmt_allvisits_detailed.Query(vanaf)
-			if err != nil {
-				fmt.Printf("%s\n", err.Error())
+	myTable := Table{
+		Pagetitle:       "detailed visitor log",
+		Pagedescription: "this page shows a detailed log of all visits over the last " + strconv.Itoa(args.number_of_days_detailed) + " days",
+		Headers:         MyHeaders,
+		Data:            []map[string]string{},
+	}
+	fmt.Printf("timestamp moet groter zijn dan %d - (%d * 86400) = %d\n", nu, args.number_of_days_detailed, vanaf)
+	stmt_allvisits_detailed := prepdb["stmt_allvisits_detailed"]
+	rows, err := stmt_allvisits_detailed.Query(vanaf)
+	if err != nil {
+		fmt.Printf("%s\n", err.Error())
+	}
+	defer rows.Close()
+	rownum := 0
+	for rows.Next() {
+		rownum = rownum + 1
+		var visit_id, visit_timestamp, visit_statuscode, visit_httpsize int
+		var referrer, request, user_ip, user_agent string
+		if err := rows.Scan(&visit_id, &referrer, &request, &visit_timestamp, &user_ip, &user_agent, &visit_statuscode, &visit_httpsize); err != nil {
+			fmt.Printf("%s\n", err.Error())
+		}
+		ignore := false
+		for _, ignoredhostagent := range args.ignoredhostagents {
+			r, err := regexp.MatchString(ignoredhostagent, user_agent)
+			if err == nil && r {
+				ignore = true
 			}
-			defer rows.Close()
-			rownum := 0
-			for rows.Next() {
-				rownum = rownum + 1
-				var visit_id,  visit_timestamp, visit_statuscode, visit_httpsize int
-				var referrer, request, user_ip, user_agent string
-				if err := rows.Scan(&visit_id, &referrer, &request,&visit_timestamp, &user_ip, &user_agent, &visit_statuscode ,&visit_httpsize); err != nil {
-					fmt.Printf("%s\n", err.Error())
-				}
-				ignore := false
-				for _, ignoredhostagent := range args.ignoredhostagents {
-					r, err := regexp.MatchString(ignoredhostagent, user_agent)
-					if err == nil && r {
-						ignore = true
-					}
-				}
-				for _, ignoredip := range args.ignoredips {
-					r, err := regexp.MatchString(ignoredip, user_ip)
-					if err == nil && r {
-						ignore = true
-					}
-				}
-				for _, ignoredreferrer := range args.ignoredreferrers {
-					r, err := regexp.MatchString(ignoredreferrer, referrer)
-					if err == nil && r {
-						ignore = true
-					}
-				}
-				for _, ignoredrequest := range args.ignoredrequests {
-					r, err := regexp.MatchString(ignoredrequest, request)
-					if err == nil && r {
-						ignore = true
-					}
-				}
-				if (ignore == false && rownum <= args.max_rows_in_table){
-					//fmt.Printf("visit_id : %d, referrer: %s, request: %s,visit_day: %d, visit_month: %d, visit_year: %d,visit_hour : %d, visit_minute: %d, visit_second: %d,visit_timestamp: %d, user_ip: %s, user_agent: %s,visit_statuscode: %d,visit_httpsize%d\n\n", visit_id, referrer, request,visit_day, visit_month, visit_year,visit_hour, visit_minute, visit_second,visit_timestamp, user_ip, user_agent,visit_statuscode,visit_httpsize)
-					MyData := map[string]string{
-						"Value_0": strconv.Itoa(rownum),
-						"Value_1":  strconv.Itoa(visit_timestamp),
-						"Value_1b": request,
-						"Value_2": referrer,
-						"Value_3": user_ip,
-						"Value_4": user_agent,
-						"Value_5": strconv.Itoa(visit_statuscode),
-						"Value_6": strconv.Itoa(visit_httpsize),
-					}
-					myTable.Data = append(myTable.Data, MyData)
-					//fmt.Printf("%+v\n", myTable)
-				} 
-				
+		}
+		for _, ignoredip := range args.ignoredips {
+			r, err := regexp.MatchString(ignoredip, user_ip)
+			if err == nil && r {
+				ignore = true
 			}
-			
-			if err := rows.Err(); err != nil {
-				fmt.Printf("%s\n", err.Error())
+		}
+		for _, ignoredreferrer := range args.ignoredreferrers {
+			r, err := regexp.MatchString(ignoredreferrer, referrer)
+			if err == nil && r {
+				ignore = true
 			}
+		}
+		for _, ignoredrequest := range args.ignoredrequests {
+			r, err := regexp.MatchString(ignoredrequest, request)
+			if err == nil && r {
+				ignore = true
+			}
+		}
+		if ignore == false && rownum <= args.max_rows_in_table {
+			//fmt.Printf("visit_id : %d, referrer: %s, request: %s,visit_day: %d, visit_month: %d, visit_year: %d,visit_hour : %d, visit_minute: %d, visit_second: %d,visit_timestamp: %d, user_ip: %s, user_agent: %s,visit_statuscode: %d,visit_httpsize%d\n\n", visit_id, referrer, request,visit_day, visit_month, visit_year,visit_hour, visit_minute, visit_second,visit_timestamp, user_ip, user_agent,visit_statuscode,visit_httpsize)
+			MyData := map[string]string{
+				"Value_0":  strconv.Itoa(rownum),
+				"Value_1":  strconv.Itoa(visit_timestamp),
+				"Value_1b": request,
+				"Value_2":  referrer,
+				"Value_3":  user_ip,
+				"Value_4":  user_agent,
+				"Value_5":  strconv.Itoa(visit_statuscode),
+				"Value_6":  strconv.Itoa(visit_httpsize),
+			}
+			myTable.Data = append(myTable.Data, MyData)
+			//fmt.Printf("%+v\n", myTable)
+		}
+
+	}
+
+	if err := rows.Err(); err != nil {
+		fmt.Printf("%s\n", err.Error())
+	}
 	//fmt.Printf("%+v\n", myTable)
 	//table_tmpl
 	t, err := template.New("mytemplate").Parse(table_tmpl)
@@ -370,7 +370,7 @@ func main() {
 	db := createdb(args.dbpad)
 	defer db.Close()
 	tx := initialisedb(db)
-	
+
 	prepdb := prepstatements(tx, args)
 	getdetailedstats(args, prepdb)
 	tx.Commit()

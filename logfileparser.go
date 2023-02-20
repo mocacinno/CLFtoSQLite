@@ -19,15 +19,15 @@ import (
 )
 
 type args struct {
-	filename   string
-	padname    string
-	dbname     string
-	timeformat string
-	ignoredips []string
+	filename          string
+	padname           string
+	dbname            string
+	timeformat        string
+	ignoredips        []string
 	ignoredhostagents []string
-	ignoredreferrers []string
-	ignoredrequests []string
-	mydomain string
+	ignoredreferrers  []string
+	ignoredrequests   []string
+	mydomain          string
 }
 
 func parseargs() args {
@@ -181,7 +181,7 @@ func getfiles(regex string, pathS string, prepdb map[string]*sql.Stmt) []string 
 func parseme(line string, prepdb map[string]*sql.Stmt, maxvisittimestamp int, timeformat string, args args) bool {
 	re := regexp.MustCompile(`(?m)^(\S*).*\[(.*)\]\s"(\S*)\s(\S*)\s([^"]*)"\s(\S*)\s(\S*)\s"([^"]*)"\s"([^"]*)"$`)
 	match := re.FindStringSubmatch(line)
-	if len(match) == 10 { 
+	if len(match) == 10 {
 		ip := match[1]
 		datumtijd := match[2]
 		method := match[3]
@@ -192,34 +192,34 @@ func parseme(line string, prepdb map[string]*sql.Stmt, maxvisittimestamp int, ti
 		referrer := match[8]
 		useragent := match[9]
 		ignore := false
-				for _, ignoredhostagent := range args.ignoredhostagents {
-					r, err := regexp.MatchString(ignoredhostagent, useragent)
-					if err == nil && r {
-						ignore = true
-					}
-				}
-				for _, ignoredip := range args.ignoredips {
-					r, err := regexp.MatchString(ignoredip, ip)
-					if err == nil && r {
-						ignore = true
-					}
-				}
-				for _, ignoredreferrer := range args.ignoredreferrers {
-					r, err := regexp.MatchString(ignoredreferrer, referrer)
-					if err == nil && r {
-						ignore = true
-					}
-				}
-				for _, ignoredrequest := range args.ignoredrequests {
-					r, err := regexp.MatchString(ignoredrequest, request)
-					if err == nil && r {
-						ignore = true
-					}
-				}
-		if (ignore == false) {
+		for _, ignoredhostagent := range args.ignoredhostagents {
+			r, err := regexp.MatchString(ignoredhostagent, useragent)
+			if err == nil && r {
+				ignore = true
+			}
+		}
+		for _, ignoredip := range args.ignoredips {
+			r, err := regexp.MatchString(ignoredip, ip)
+			if err == nil && r {
+				ignore = true
+			}
+		}
+		for _, ignoredreferrer := range args.ignoredreferrers {
+			r, err := regexp.MatchString(ignoredreferrer, referrer)
+			if err == nil && r {
+				ignore = true
+			}
+		}
+		for _, ignoredrequest := range args.ignoredrequests {
+			r, err := regexp.MatchString(ignoredrequest, request)
+			if err == nil && r {
+				ignore = true
+			}
+		}
+		if ignore == false {
 			insertrow(prepdb, ip, datumtijd, method, request, httpversion, returncode, httpsize, referrer, useragent, maxvisittimestamp, timeformat)
 		}
-		
+
 	} else {
 		fmt.Printf("unable to parse line %s %s", len(match), line)
 	}
@@ -364,10 +364,10 @@ func insertrow(prepdb map[string]*sql.Stmt, ip string, datumtijd string, method 
 	}
 	epoch := thetime.Unix()
 	/*
-	visit_hour, visit_minute, visit_second := thetime.Clock()
-	visit_year := thetime.Year()
-	visit_month := thetime.Month()
-	visit_day := thetime.Day()
+		visit_hour, visit_minute, visit_second := thetime.Clock()
+		visit_year := thetime.Year()
+		visit_month := thetime.Month()
+		visit_day := thetime.Day()
 	*/
 	//fmt.Printf("\nDEBUG: ik heb timestamp %s en verwacht formaat %s. Ik haal hieruit %d/%d/%d %d:%d:%d en maakte hiervan de unix timestamp %d\n", datumtijd, longForm, visit_day, visit_month, visit_year, visit_hour, visit_minute, visit_second, epoch)
 
@@ -448,7 +448,7 @@ func insertrow(prepdb map[string]*sql.Stmt, ip string, datumtijd string, method 
 			get max timestamp of current db and insert newer records
 		*/
 		stmt_insertvisit := prepdb["stmt_insertvisit"]
-		stmt_insertvisit.Exec(referrerid, requestid,  int(epoch), userid, returncode, httpsize)
+		stmt_insertvisit.Exec(referrerid, requestid, int(epoch), userid, returncode, httpsize)
 	}
 
 }
