@@ -16,6 +16,7 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+	"runtime"
 	//"log"
 	//	"github.com/wcharczuk/go-chart/drawing"
 )
@@ -250,7 +251,7 @@ func prepstatements(tx *sql.Tx, args args) map[string]*sql.Stmt {
 	/*
 		detailed info about all visits
 	*/
-	query_allvisits_detailed := " select visit.id as visit_id, referrer.referrer as referrer, request.request as request,   visit.visit_timestamp as visit_timestamp, user.ip as user_ip, user.useragent as user_agent, visit.statuscode as visit_statuscode, visit.httpsize as visit_httpsize "
+	query_allvisits_detailed := " select visit.id as visit_id, referrer.referrer as referrer, request.request as request,   visit.visit_timestamp as visit_timestamp, user.ip as user_ip, user.useragent as user_agent, visit.statuscode as visit_statuscode, visit.httpsize as visit_httpsize, user.id as user_id "
 	query_allvisits_detailed += " from visit, user, request, referrer "
 	query_allvisits_detailed += " where visit.referrer = referrer.id and visit.request = request.id and visit.user = user.id "
 	query_allvisits_detailed += " and visit_timestamp > ? "
@@ -266,7 +267,9 @@ func prepstatements(tx *sql.Tx, args args) map[string]*sql.Stmt {
 	return listitems
 }
 
-func getdetailedstats(args args, prepdb map[string]*sql.Stmt) bool {
+func getdetailedstats_andfillstructs(args args, prepdb map[string]*sql.Stmt) (map[int]Visitor) {
+	visitorlog := make(map[int]Visitor)
+
 	nu := int(time.Now().Unix())
 	vanaf := nu - (args.number_of_days_detailed * 86400)
 	MyHeaders := map[string]string{
@@ -295,11 +298,14 @@ func getdetailedstats(args args, prepdb map[string]*sql.Stmt) bool {
 	rownum := 0
 	for rows.Next() {
 		rownum = rownum + 1
-		var visit_id, visit_timestamp, visit_statuscode, visit_httpsize int
+		var visit_id, visit_timestamp, visit_statuscode, visit_httpsize, user_id int
 		var referrer, request, user_ip, user_agent string
-		if err := rows.Scan(&visit_id, &referrer, &request, &visit_timestamp, &user_ip, &user_agent, &visit_statuscode, &visit_httpsize); err != nil {
+		if err := rows.Scan(&visit_id, &referrer, &request, &visit_timestamp, &user_ip, &user_agent, &visit_statuscode, &visit_httpsize, &user_id); err != nil {
 			fmt.Printf("%s\n", err.Error())
 		}
+
+
+
 		ignore := false
 		for _, ignoredhostagent := range args.ignoredhostagents {
 			r, err := regexp.MatchString(ignoredhostagent, user_agent)
@@ -325,20 +331,34 @@ func getdetailedstats(args args, prepdb map[string]*sql.Stmt) bool {
 				ignore = true
 			}
 		}
-		if ignore == false && rownum <= args.max_rows_in_table {
+		if ignore == false  {
 			//fmt.Printf("visit_id : %d, referrer: %s, request: %s,visit_day: %d, visit_month: %d, visit_year: %d,visit_hour : %d, visit_minute: %d, visit_second: %d,visit_timestamp: %d, user_ip: %s, user_agent: %s,visit_statuscode: %d,visit_httpsize%d\n\n", visit_id, referrer, request,visit_day, visit_month, visit_year,visit_hour, visit_minute, visit_second,visit_timestamp, user_ip, user_agent,visit_statuscode,visit_httpsize)
-			MyData := map[string]string{
-				"Value_0":  strconv.Itoa(rownum),
-				"Value_1":  strconv.Itoa(visit_timestamp),
-				"Value_1b": request,
-				"Value_2":  referrer,
-				"Value_3":  user_ip,
-				"Value_4":  user_agent,
-				"Value_5":  strconv.Itoa(visit_statuscode),
-				"Value_6":  strconv.Itoa(visit_httpsize),
+			visitstruct, exits := visitorlog[user_id]
+			MyVisit := Visit{id: visit_id, referrer: referrer, request: request, timestamp: visit_timestamp, statuscode: visit_statuscode, httpsize: visit_httpsize }
+			if exits {
+				visitstruct.visit = append(visitstruct.visit, MyVisit)
+				visitorlog[user_id] = visitstruct
+			} else {
+				MyVisitor := Visitor {visitor_id: user_id, ip: user_ip, useragent: user_agent}
+				MyVisitor.visit = append(MyVisitor.visit)
+				visitorlog[user_id] = MyVisitor
+				// de visitstruct bestaat nog niet, ik moet hem aanmaken én de visit appenden
 			}
-			myTable.Data = append(myTable.Data, MyData)
-			//fmt.Printf("%+v\n", myTable)
+			if (rownum <= args.max_rows_in_table) {
+				MyData := map[string]string{
+					"Value_0":  strconv.Itoa(rownum),
+					"Value_1":  strconv.Itoa(visit_timestamp),
+					"Value_1b": request,
+					"Value_2":  referrer,
+					"Value_3":  user_ip,
+					"Value_4":  user_agent,
+					"Value_5":  strconv.Itoa(visit_statuscode),
+					"Value_6":  strconv.Itoa(visit_httpsize),
+				}
+				myTable.Data = append(myTable.Data, MyData)
+				//fmt.Printf("%+v\n", myTable)
+			}
+			
 		}
 
 	}
@@ -361,19 +381,30 @@ func getdetailedstats(args args, prepdb map[string]*sql.Stmt) bool {
 		panic(err)
 	}
 	defer outputHTMLFile.Close()
-	return true
+	return visitorlog
 }
 
 func main() {
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+	fmt.Printf("runtime memstats begin of proces %+v\n", memStats.Alloc)
 	args := parseargs()
 	fmt.Printf("starting with parameters %+v\n", args)
+	runtime.ReadMemStats(&memStats)
+	fmt.Printf("runtime memstats after argument parsing %+v\n", memStats.Alloc)
 	db := createdb(args.dbpad)
 	defer db.Close()
 	tx := initialisedb(db)
-
+	runtime.ReadMemStats(&memStats)
+	fmt.Printf("runtime memstats after initilialising db %+v\n", memStats.Alloc)
 	prepdb := prepstatements(tx, args)
-	getdetailedstats(args, prepdb)
+	runtime.ReadMemStats(&memStats)
+	fmt.Printf("runtime memstats after prep statements %+v\n", memStats.Alloc)
+	_ = getdetailedstats_andfillstructs(args, prepdb)
+	//fmt.Printf("%+v", visitors)
 	tx.Commit()
+	runtime.ReadMemStats(&memStats)
+	fmt.Printf("runtime memstats end of proces %+v\n", memStats.Alloc)
 	//createBarChart()
 	//drawdraw()
 }
