@@ -47,9 +47,11 @@ type Visitor struct {
 type timeseriesplot_html struct {
 	Title string
 	Img string
+	Description string
 }
 const timeseriesplot_tmpl = `
 <h1>{{.Title}}</h1>
+<p>{{.Description}}</p>
 <img src="{{.Img}}">
 `
 
@@ -429,11 +431,11 @@ func overviewgraphs(args args, prepdb map[string]*sql.Stmt) bool {
 		XValues = append(XValues, golangtime)
 		YValues = append(YValues, float64(aantalhits))
 	}
-	gochart_drawtimeseries(XValues, YValues, args, "Number of hits", "Date", "NbHitsPerDay.png", "NbHitsPerDay.html", "Number of hits per day")
+	gochart_drawtimeseries(XValues, YValues, args, "Number of hits", "Date", "NbHitsPerDay.png", "NbHitsPerDay.html", "Number of hits per day", "The number of raw hits per day")
 	return true
 }
 
-func gochart_drawtimeseries(XValues []time.Time, YValues []float64, args args, xtitle string, ytitle string, outputfilename_image string, outputfilename_html string, htmltitle string) {
+func gochart_drawtimeseries(XValues []time.Time, YValues []float64, args args, xtitle string, ytitle string, outputfilename_image string, outputfilename_html string, htmltitle string, description string) {
 	graph := chart.Chart{
 		Series: []chart.Series{
 			chart.TimeSeries{
@@ -461,6 +463,7 @@ func gochart_drawtimeseries(XValues []time.Time, YValues []float64, args args, x
 	myHtmlInput := timeseriesplot_html {
 		Title: htmltitle,
 		Img: outputfilename_image,
+		Description: description,
 	}
 	t, err := template.New("mytemplate").Parse(timeseriesplot_tmpl)
 	if err != nil {
