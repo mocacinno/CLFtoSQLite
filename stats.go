@@ -151,7 +151,7 @@ func generateBarItems() []opts.BarData {
 
 func parseargs() args {
 	var output args
-	padPtr := flag.String("path", `./output`, "the output path")
+	padPtr := flag.String("outputpath", `./output`, "the output path")
 	dbnamePtr := flag.String("dbname", `apachelog.db`, "name of the database to use")
 	mydomainPtr := flag.String("mydomain", `localhost.local`, "your domain name, so it doesn't show up as refferer")
 	number_of_days_detailed := flag.Int("number_of_days_detailed", 31, "number of days you want to show detailed info about")
@@ -264,6 +264,16 @@ func prepstatements(tx *sql.Tx, args args) map[string]*sql.Stmt {
 	}
 	listitems["stmt_allvisits_detailed"] = stmt_allvisits_detailed
 
+	query_nbhitsperday := "select count(*), date(visit_timestamp, 'unixepoch'), max(visit_timestamp) from visit group by date(visit_timestamp, 'unixepoch')"
+	//fmt.Printf("%s", query_allvisits_detailed)
+	stmt_nbhitsperday, err := tx.Prepare(query_nbhitsperday)
+	if err != nil {
+		fmt.Printf("%s\n", err.Error())
+		os.Exit(1)
+	}
+	listitems["stmt_nbhitsperday"] = stmt_nbhitsperday
+
+
 	return listitems
 }
 
@@ -288,7 +298,7 @@ func getdetailedstats_andfillstructs(args args, prepdb map[string]*sql.Stmt) (ma
 		Headers:         MyHeaders,
 		Data:            []map[string]string{},
 	}
-	fmt.Printf("timestamp moet groter zijn dan %d - (%d * 86400) = %d\n", nu, args.number_of_days_detailed, vanaf)
+	//fmt.Printf("timestamp moet groter zijn dan %d - (%d * 86400) = %d\n", nu, args.number_of_days_detailed, vanaf)
 	stmt_allvisits_detailed := prepdb["stmt_allvisits_detailed"]
 	rows, err := stmt_allvisits_detailed.Query(vanaf)
 	if err != nil {
@@ -384,27 +394,74 @@ func getdetailedstats_andfillstructs(args args, prepdb map[string]*sql.Stmt) (ma
 	return visitorlog
 }
 
+func visitgraphs(map[int]Visitor, args) bool {
+	return true
+}
+
+func overviewgraphs(args args, prepdb map[string]*sql.Stmt) bool {
+	var XValues []time.Time
+	var YValues []float64
+	stmt_nbhitsperday := prepdb["stmt_nbhitsperday"]
+	rows, err := stmt_nbhitsperday.Query()
+	if err != nil {
+		fmt.Printf("%s\n", err.Error())
+	}
+	defer rows.Close()
+	rownum := 0
+	for rows.Next() {
+		rownum = rownum + 1
+		var aantalhits int
+		var datum string
+		var avgepoch int
+		if err := rows.Scan(&aantalhits, &datum, &avgepoch); err != nil {
+			fmt.Printf("%s\n", err.Error())
+		}
+		golangtime := time.Unix(int64(avgepoch),0)
+		//fmt.Printf("%s => %d\n", datum, aantalhits)
+		XValues = append(XValues, golangtime)
+		YValues = append(YValues, float64(aantalhits))
+	}
+	
+	graph := chart.Chart{
+		XAxis: chart.XAxis{
+			ValueFormatter: chart.TimeHourValueFormatter,
+		},
+		Series: []chart.Series{
+			chart.TimeSeries{
+				XValues: XValues,
+				YValues: YValues,
+			},
+		},
+	}
+
+	f, _ := os.Create(args.outputpad + "NbHitsPerDay.png")
+	defer f.Close()
+	graph.Render(chart.PNG, f)
+	return true
+}
+
 func main() {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
-	fmt.Printf("runtime memstats begin of proces %+v\n", memStats.Alloc)
+	//fmt.Printf("runtime memstats begin of proces %+v\n", memStats.Alloc)
 	args := parseargs()
-	fmt.Printf("starting with parameters %+v\n", args)
+	//fmt.Printf("starting with parameters %+v\n", args)
 	runtime.ReadMemStats(&memStats)
-	fmt.Printf("runtime memstats after argument parsing %+v\n", memStats.Alloc)
+	//fmt.Printf("runtime memstats after argument parsing %+v\n", memStats.Alloc)
 	db := createdb(args.dbpad)
 	defer db.Close()
 	tx := initialisedb(db)
 	runtime.ReadMemStats(&memStats)
-	fmt.Printf("runtime memstats after initilialising db %+v\n", memStats.Alloc)
+	//fmt.Printf("runtime memstats after initilialising db %+v\n", memStats.Alloc)
 	prepdb := prepstatements(tx, args)
 	runtime.ReadMemStats(&memStats)
-	fmt.Printf("runtime memstats after prep statements %+v\n", memStats.Alloc)
-	_ = getdetailedstats_andfillstructs(args, prepdb)
-	//fmt.Printf("%+v", visitors)
+	//fmt.Printf("runtime memstats after prep statements %+v\n", memStats.Alloc)
+	visitors := getdetailedstats_andfillstructs(args, prepdb)
+	visitgraphs(visitors, args)
+	overviewgraphs(args,prepdb)
 	tx.Commit()
 	runtime.ReadMemStats(&memStats)
-	fmt.Printf("runtime memstats end of proces %+v\n", memStats.Alloc)
+	//fmt.Printf("runtime memstats end of proces %+v\n", memStats.Alloc)
 	//createBarChart()
-	//drawdraw()
+	drawdraw()
 }
