@@ -431,7 +431,7 @@ func overviewgraphs(args args, prepdb map[string]*sql.Stmt) bool {
 		XValues = append(XValues, golangtime)
 		YValues = append(YValues, float64(aantalhits))
 	}
-	gochart_drawtimeseries(XValues, YValues, args, "Number of hits", "Date", "NbHitsPerDay.png", "NbHitsPerDay.html", "Number of hits per day", "The number of raw hits per day")
+	gochart_drawtimeseries(XValues, YValues, args, "Date", "Number of hits", "NbHitsPerDay.png", "NbHitsPerDay.html", "Number of hits per day", "The number of raw hits per day")
 	return true
 }
 
