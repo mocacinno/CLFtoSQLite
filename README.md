@@ -1,6 +1,6 @@
 # CLFtoSQLite
 
-** important: this project is currently in pre-alpha... Some parts work, others don't!!! It's useless to open issues at this point since everything is a work in progress!!!**  
+**important: this project is currently in pre-alpha... Some parts work, others don't!!! It's useless to open issues at this point since everything is a work in progress!!!**  
 combined logfile from apache parsing, putting all data in sqlite and visualising said data
 
 ## About The Project
