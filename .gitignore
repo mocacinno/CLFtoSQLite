@@ -11,6 +11,7 @@ output/
 *.gz
 *acces*
 *.db
+builds/
 
 # Test binary, built with `go test -c`
 *.test

@@ -27,7 +27,7 @@ type Table struct {
 	Data []map[string]string
 }
 
-Type Visit struct {
+type Visit struct {
 	id int
 	referrer string
 	request string
@@ -36,12 +36,12 @@ Type Visit struct {
 	httpsize int
 }
 
-Type Visitor struct {
+type Visitor struct {
 	visitor_id int
 	ip string
 	useragent string
 	visit []Visit
-}
+} 
 
 const table_tmpl = `<!DOCTYPE html>
 <html>
