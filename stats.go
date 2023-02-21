@@ -158,6 +158,16 @@ func parseargs() args {
 	var ignorehostagents_list []string
 	var ignoredreferrers_list []string
 	var ignoredrequests_list []string
+	if flag_configfile == `none` {
+		if _, err := os.Stat("config.ini"); err == nil {
+			fmt.Printf("config file was not entered, but i found a config.ini file in the current path... using that one\n")
+			flag_configfile = "config.ini"
+		}
+		if _, err := os.Stat("/etc/CLFtoSQLite/config.ini"); err == nil {
+			fmt.Printf("config file was not entered, but i found a config.ini file: /etc/CLFtoSQLite/config.ini... using that one\n")
+			flag_configfile = "config.ini"
+		}
+	}
 	if flag_configfile != `none` {
 		cfg, err := ini.Load(flag_configfile)
 		if err != nil {
