@@ -54,6 +54,8 @@ const timeseriesplot_tmpl = `
 <img src="{{.Img}}">
 `
 
+
+
 const table_tmpl = `<!DOCTYPE html>
 <html>
 	<head>
@@ -117,6 +119,24 @@ type args struct {
 	ignoredrequests          []string
 	mydomain                 string
 }
+
+type page_forindex struct{
+    Title      string
+    Url       string
+	Textpre		string
+	Textpost	string
+}
+
+var indexpages []page_forindex
+
+const html_index = `<!DOCTYPE html>
+<html>
+	<body>
+				{{range .}}
+				<p>{{.Textpre}}<a href="{{.Url}}">{{.Title}}</a>{{.Textpost}}</p>
+				{{end}}
+	</body>
+</html>`
 
 func parseargs() args {
 	var output args
@@ -349,6 +369,13 @@ func getdetailedstats_andfillstructs(args args, prepdb map[string]*sql.Stmt) map
 		panic(err)
 	}
 	defer outputHTMLFile.Close()
+	
+	MyPageForIndex := page_forindex{
+    Title: "Detailed visitor Log",
+    Url:       "detailed_visitor_log.html",
+	}
+	indexpages = append(indexpages, MyPageForIndex)
+	
 	return visitorlog
 }
 
@@ -356,7 +383,20 @@ func visitgraphs(map[int]Visitor, args) bool {
 	return true
 }
 
-func overviewgraphs(args args, prepdb map[string]*sql.Stmt) bool {
+func overview_nbhits_total_last4weeks(args args, prepdb map[string]*sql.Stmt) bool {
+
+	MyHeaders := map[string]string{
+		"Title_1":  "date",
+		"Title_2":  "number of hits",
+	}
+	myTable := Table{
+		Pagetitle:       "number of hits per day",
+		Pagedescription: "this table show the total raw hits per day",
+		Headers:         MyHeaders,
+		Data:            []map[string]string{},
+	}
+
+
 	var XValues_ts []time.Time
 	var YValues_ts []float64
 	var XValues_bs []string
@@ -388,6 +428,12 @@ func overviewgraphs(args args, prepdb map[string]*sql.Stmt) bool {
 		XValues_ts = append(XValues_ts, golangtime)
 		YValues_ts = append(YValues_ts, float64(aantalhits)) 
 		YValues_bs["week " + strconv.Itoa(weeknum)] = append(YValues_bs["week " + strconv.Itoa(weeknum)], aantalhits)
+		
+		MyData := map[string]string{
+				"Value_1":  golangtime.Format("2006-01-02"),
+				"Value_2":  strconv.Itoa(aantalhits),
+			}
+		myTable.Data = append(myTable.Data, MyData)
 	}
 	
 	for i := 1; i < 8; i++ {
@@ -396,6 +442,27 @@ func overviewgraphs(args args, prepdb map[string]*sql.Stmt) bool {
 	
 	gochart_drawtimeseries(XValues_ts, YValues_ts, args, "Date", "Number of hits", "NbHitsPerDay.png", "NbHitsPerDay.html", "Number of hits per day", "The number of raw hits per day")
 	createBarChart_XString_Yint(XValues_bs, YValues_bs, "hits per day over the last 4 weeks", "day by day comparison of the number of hits for the last 4 weeks", args, "nb_hits_comparison_4_weeks.html")
+	
+	t, err := template.New("mytemplate").Parse(table_tmpl)
+	if err != nil {
+		panic(err)
+	}
+	var outputHTMLFile *os.File
+	if outputHTMLFile, err = os.Create(args.outputpad + "NbRawHitsPerDay.html"); err != nil {
+		panic(err)
+	}
+
+	if err = t.Execute(outputHTMLFile, myTable); err != nil {
+		panic(err)
+	}
+	defer outputHTMLFile.Close()
+	
+	MyPageForIndex := page_forindex{
+    Title: "Number of Raw hits per day",
+    Url:       "NbRawHitsPerDay.html",
+	}
+	indexpages = append(indexpages, MyPageForIndex)
+	
 	return true
 }
 
@@ -414,6 +481,12 @@ func createBarChart_XString_Yint(XValues []string, YValues map[string][]int, tit
 	}
 	f, _ := os.Create(args.outputpad + filename)
 	_ = bar.Render(f)
+	
+	MyPageForIndex := page_forindex{
+    Title: title,
+    Url:       filename,
+	}
+	indexpages = append(indexpages, MyPageForIndex)
 }
 
 func gochart_drawtimeseries(XValues []time.Time, YValues []float64, args args, xtitle string, ytitle string, outputfilename_image string, outputfilename_html string, htmltitle string, description string) {
@@ -458,6 +531,12 @@ func gochart_drawtimeseries(XValues []time.Time, YValues []float64, args args, x
 		panic(err)
 	}
 	defer outputHTMLFile.Close()
+	
+	MyPageForIndex := page_forindex{
+    Title: htmltitle,
+    Url:       outputfilename_html,
+	}
+	indexpages = append(indexpages, MyPageForIndex)
 }
 
 func main() {
@@ -474,7 +553,24 @@ func main() {
 	runtime.ReadMemStats(&memStats)
 	visitors := getdetailedstats_andfillstructs(args, prepdb)
 	visitgraphs(visitors, args)
-	overviewgraphs(args, prepdb)
+	overview_nbhits_total_last4weeks(args, prepdb)
 	tx.Commit()
 	runtime.ReadMemStats(&memStats)
+	//fmt.Printf("%+v", indexpages)
+	
+	t, err := template.New("mytemplate").Parse(html_index)
+	if err != nil {
+		panic(err)
+	}
+	var outputHTMLFile *os.File
+	if outputHTMLFile, err = os.Create(args.outputpad + "index.html"); err != nil {
+		panic(err)
+	}
+
+	if err = t.Execute(outputHTMLFile, indexpages); err != nil {
+		panic(err)
+	}
+	defer outputHTMLFile.Close()
+	
+	
 }
