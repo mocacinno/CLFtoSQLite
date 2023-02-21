@@ -54,8 +54,6 @@ const timeseriesplot_tmpl = `
 <img src="{{.Img}}">
 `
 
-
-
 const table_tmpl = `<!DOCTYPE html>
 <html>
 	<head>
@@ -120,11 +118,11 @@ type args struct {
 	mydomain                 string
 }
 
-type page_forindex struct{
-    Title      string
-    Url       string
-	Textpre		string
-	Textpost	string
+type page_forindex struct {
+	Title    string
+	Url      string
+	Textpre  string
+	Textpost string
 }
 
 var indexpages []page_forindex
@@ -360,8 +358,8 @@ func getdetailedstats_andfillstructs(args args, prepdb map[string]*sql.Stmt) map
 	return visitorlog
 }
 
-func createtable (args args, htmlfile string, htmltitle string, myTable Table) {
-t, err := template.New("mytemplate").Parse(table_tmpl)
+func createtable(args args, htmlfile string, htmltitle string, myTable Table) {
+	t, err := template.New("mytemplate").Parse(table_tmpl)
 	if err != nil {
 		panic(err)
 	}
@@ -374,20 +372,19 @@ t, err := template.New("mytemplate").Parse(table_tmpl)
 		panic(err)
 	}
 	defer outputHTMLFile.Close()
-	
+
 	MyPageForIndex := page_forindex{
-    Title: htmltitle,
-    Url:       htmlfile,
+		Title: htmltitle,
+		Url:   htmlfile,
 	}
 	indexpages = append(indexpages, MyPageForIndex)
 }
 
-
 func overview_nbhits_total_last4weeks(args args, prepdb map[string]*sql.Stmt) bool {
 
 	MyHeaders := map[string]string{
-		"Title_1":  "date",
-		"Title_2":  "number of hits",
+		"Title_1": "date",
+		"Title_2": "number of hits",
 	}
 	myTable := Table{
 		Pagetitle:       "number of hits per day",
@@ -395,7 +392,6 @@ func overview_nbhits_total_last4weeks(args args, prepdb map[string]*sql.Stmt) bo
 		Headers:         MyHeaders,
 		Data:            []map[string]string{},
 	}
-
 
 	var XValues_ts []time.Time
 	var YValues_ts []float64
@@ -411,12 +407,12 @@ func overview_nbhits_total_last4weeks(args args, prepdb map[string]*sql.Stmt) bo
 	weeknum := 0
 	for rows.Next() {
 		rownum = rownum + 1
-		if (rownum > 6) {
+		if rownum > 6 {
 			rownum = 0
 			weeknum++
 		}
-		if (weeknum > 4) {
-			continue;
+		if weeknum > 4 {
+			continue
 		}
 		var aantalhits int
 		var datum string
@@ -426,20 +422,20 @@ func overview_nbhits_total_last4weeks(args args, prepdb map[string]*sql.Stmt) bo
 		}
 		golangtime := time.Unix(int64(avgepoch), 0)
 		XValues_ts = append(XValues_ts, golangtime)
-		YValues_ts = append(YValues_ts, float64(aantalhits)) 
-		YValues_bs["week " + strconv.Itoa(weeknum)] = append(YValues_bs["week " + strconv.Itoa(weeknum)], aantalhits)
-		
+		YValues_ts = append(YValues_ts, float64(aantalhits))
+		YValues_bs["week "+strconv.Itoa(weeknum)] = append(YValues_bs["week "+strconv.Itoa(weeknum)], aantalhits)
+
 		MyData := map[string]string{
-				"Value_1":  golangtime.Format("2006-01-02"),
-				"Value_2":  strconv.Itoa(aantalhits),
-			}
+			"Value_1": golangtime.Format("2006-01-02"),
+			"Value_2": strconv.Itoa(aantalhits),
+		}
 		myTable.Data = append(myTable.Data, MyData)
 	}
-	
+
 	for i := 1; i < 8; i++ {
 		XValues_bs = append(XValues_bs, strconv.Itoa(rownum))
 	}
-	
+
 	gochart_drawtimeseries(XValues_ts, YValues_ts, args, "Date", "Number of hits", "NbHitsPerDay.png", "NbHitsPerDay.html", "Number of hits per day", "The number of raw hits per day")
 	createBarChart_XString_Yint(XValues_bs, YValues_bs, "hits per day over the last 4 weeks", "day by day comparison of the number of hits for the last 4 weeks", args, "nb_hits_comparison_4_weeks.html")
 	createtable(args, "NbRawHitsPerDay.html", "Number of Raw hits per day", myTable)
@@ -456,15 +452,15 @@ func createBarChart_XString_Yint(XValues []string, YValues map[string][]int, tit
 		items := make([]opts.BarData, 0)
 		for _, serievalue := range serievalues {
 			items = append(items, opts.BarData{Value: serievalue})
-		}		
+		}
 		bar.SetXAxis(XValues).AddSeries(serienaam, items)
 	}
 	f, _ := os.Create(args.outputpad + filename)
 	_ = bar.Render(f)
-	
+
 	MyPageForIndex := page_forindex{
-    Title: title,
-    Url:       filename,
+		Title: title,
+		Url:   filename,
 	}
 	indexpages = append(indexpages, MyPageForIndex)
 }
@@ -511,10 +507,10 @@ func gochart_drawtimeseries(XValues []time.Time, YValues []float64, args args, x
 		panic(err)
 	}
 	defer outputHTMLFile.Close()
-	
+
 	MyPageForIndex := page_forindex{
-    Title: htmltitle,
-    Url:       outputfilename_html,
+		Title: htmltitle,
+		Url:   outputfilename_html,
 	}
 	indexpages = append(indexpages, MyPageForIndex)
 }
@@ -554,7 +550,5 @@ func main() {
 	runtime.ReadMemStats(&memStats)
 	//fmt.Printf("%+v", indexpages)
 	createindex(args)
-	
-	
-	
+
 }
