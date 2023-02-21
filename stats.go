@@ -9,16 +9,13 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/wcharczuk/go-chart"
 	"gopkg.in/ini.v1"
+	"html/template"
 	"math/rand"
 	"os"
-	//_ "reflect"
-	"html/template"
 	"regexp"
+	"runtime"
 	"strconv"
 	"time"
-	"runtime"
-	//"log"
-	//	"github.com/wcharczuk/go-chart/drawing"
 )
 
 type Table struct {
@@ -45,10 +42,11 @@ type Visitor struct {
 }
 
 type timeseriesplot_html struct {
-	Title string
-	Img string
+	Title       string
+	Img         string
 	Description string
 }
+
 const timeseriesplot_tmpl = `
 <h1>{{.Title}}</h1>
 <p>{{.Description}}</p>
@@ -119,47 +117,6 @@ type args struct {
 	mydomain                 string
 }
 
-func drawdraw() {
-	graph := chart.Chart{
-		Series: []chart.Series{
-			chart.ContinuousSeries{
-				XValues: []float64{1.0, 2.0, 3.0, 4.0},
-				YValues: []float64{1.0, 2.0, 3.0, 4.0},
-			},
-		},
-	}
-
-	f, _ := os.Create("./output/output.png")
-	defer f.Close()
-	graph.Render(chart.PNG, f)
-}
-
-func createBarChart() {
-	// create a new bar instance
-	bar := charts.NewBar()
-
-	// Set global options
-	bar.SetGlobalOptions(charts.WithTitleOpts(opts.Title{
-		Title:    "Bar chart in Go",
-		Subtitle: "This is fun to use!",
-	}))
-
-	// Put data into instance
-	bar.SetXAxis([]string{"Jan", "Feb", "Mar", "Apr", "May", "Jun"}).
-		AddSeries("Category A", generateBarItems()).
-		AddSeries("Category B", generateBarItems())
-	f, _ := os.Create("./output/bar.html")
-	_ = bar.Render(f)
-}
-
-func generateBarItems() []opts.BarData {
-	items := make([]opts.BarData, 0)
-	for i := 0; i < 6; i++ {
-		items = append(items, opts.BarData{Value: rand.Intn(500)})
-	}
-	return items
-}
-
 func parseargs() args {
 	var output args
 	padPtr := flag.String("outputpath", `./output`, "the output path")
@@ -216,7 +173,6 @@ func parseargs() args {
 			ignoredrequests_list = append(ignoredrequests_list, ignoredrequest.String())
 		}
 		output.ignoredrequests = ignoredrequests_list
-		//ignoredreferrers
 	} else {
 		output.outputpad = *padPtr
 		output.dbpad = *dbnamePtr
@@ -267,7 +223,6 @@ func prepstatements(tx *sql.Tx, args args) map[string]*sql.Stmt {
 	query_allvisits_detailed += " where visit.referrer = referrer.id and visit.request = request.id and visit.user = user.id "
 	query_allvisits_detailed += " and visit_timestamp > ? "
 	query_allvisits_detailed += " order by visit_timestamp desc "
-	//fmt.Printf("%s", query_allvisits_detailed)
 	stmt_allvisits_detailed, err := tx.Prepare(query_allvisits_detailed)
 	if err != nil {
 		fmt.Printf("%s\n", err.Error())
@@ -275,8 +230,10 @@ func prepstatements(tx *sql.Tx, args args) map[string]*sql.Stmt {
 	}
 	listitems["stmt_allvisits_detailed"] = stmt_allvisits_detailed
 
+	/*
+		number of raw visitors per day
+	*/
 	query_nbhitsperday := "select count(*), date(visit_timestamp, 'unixepoch'), max(visit_timestamp) from visit group by date(visit_timestamp, 'unixepoch')"
-	//fmt.Printf("%s", query_allvisits_detailed)
 	stmt_nbhitsperday, err := tx.Prepare(query_nbhitsperday)
 	if err != nil {
 		fmt.Printf("%s\n", err.Error())
@@ -284,11 +241,10 @@ func prepstatements(tx *sql.Tx, args args) map[string]*sql.Stmt {
 	}
 	listitems["stmt_nbhitsperday"] = stmt_nbhitsperday
 
-
 	return listitems
 }
 
-func getdetailedstats_andfillstructs(args args, prepdb map[string]*sql.Stmt) (map[int]Visitor) {
+func getdetailedstats_andfillstructs(args args, prepdb map[string]*sql.Stmt) map[int]Visitor {
 	visitorlog := make(map[int]Visitor)
 
 	nu := int(time.Now().Unix())
@@ -309,7 +265,6 @@ func getdetailedstats_andfillstructs(args args, prepdb map[string]*sql.Stmt) (ma
 		Headers:         MyHeaders,
 		Data:            []map[string]string{},
 	}
-	//fmt.Printf("timestamp moet groter zijn dan %d - (%d * 86400) = %d\n", nu, args.number_of_days_detailed, vanaf)
 	stmt_allvisits_detailed := prepdb["stmt_allvisits_detailed"]
 	rows, err := stmt_allvisits_detailed.Query(vanaf)
 	if err != nil {
@@ -324,8 +279,6 @@ func getdetailedstats_andfillstructs(args args, prepdb map[string]*sql.Stmt) (ma
 		if err := rows.Scan(&visit_id, &referrer, &request, &visit_timestamp, &user_ip, &user_agent, &visit_statuscode, &visit_httpsize, &user_id); err != nil {
 			fmt.Printf("%s\n", err.Error())
 		}
-
-
 
 		ignore := false
 		for _, ignoredhostagent := range args.ignoredhostagents {
@@ -352,20 +305,18 @@ func getdetailedstats_andfillstructs(args args, prepdb map[string]*sql.Stmt) (ma
 				ignore = true
 			}
 		}
-		if ignore == false  {
-			//fmt.Printf("visit_id : %d, referrer: %s, request: %s,visit_day: %d, visit_month: %d, visit_year: %d,visit_hour : %d, visit_minute: %d, visit_second: %d,visit_timestamp: %d, user_ip: %s, user_agent: %s,visit_statuscode: %d,visit_httpsize%d\n\n", visit_id, referrer, request,visit_day, visit_month, visit_year,visit_hour, visit_minute, visit_second,visit_timestamp, user_ip, user_agent,visit_statuscode,visit_httpsize)
+		if ignore == false {
 			visitstruct, exits := visitorlog[user_id]
-			MyVisit := Visit{id: visit_id, referrer: referrer, request: request, timestamp: visit_timestamp, statuscode: visit_statuscode, httpsize: visit_httpsize }
+			MyVisit := Visit{id: visit_id, referrer: referrer, request: request, timestamp: visit_timestamp, statuscode: visit_statuscode, httpsize: visit_httpsize}
 			if exits {
 				visitstruct.visit = append(visitstruct.visit, MyVisit)
 				visitorlog[user_id] = visitstruct
 			} else {
-				MyVisitor := Visitor {visitor_id: user_id, ip: user_ip, useragent: user_agent}
+				MyVisitor := Visitor{visitor_id: user_id, ip: user_ip, useragent: user_agent}
 				MyVisitor.visit = append(MyVisitor.visit)
 				visitorlog[user_id] = MyVisitor
-				// de visitstruct bestaat nog niet, ik moet hem aanmaken én de visit appenden
 			}
-			if (rownum <= args.max_rows_in_table) {
+			if rownum <= args.max_rows_in_table {
 				MyData := map[string]string{
 					"Value_0":  strconv.Itoa(rownum),
 					"Value_1":  strconv.Itoa(visit_timestamp),
@@ -377,18 +328,13 @@ func getdetailedstats_andfillstructs(args args, prepdb map[string]*sql.Stmt) (ma
 					"Value_6":  strconv.Itoa(visit_httpsize),
 				}
 				myTable.Data = append(myTable.Data, MyData)
-				//fmt.Printf("%+v\n", myTable)
 			}
-			
 		}
-
 	}
 
 	if err := rows.Err(); err != nil {
 		fmt.Printf("%s\n", err.Error())
 	}
-	//fmt.Printf("%+v\n", myTable)
-	//table_tmpl
 	t, err := template.New("mytemplate").Parse(table_tmpl)
 	if err != nil {
 		panic(err)
@@ -410,8 +356,10 @@ func visitgraphs(map[int]Visitor, args) bool {
 }
 
 func overviewgraphs(args args, prepdb map[string]*sql.Stmt) bool {
-	var XValues []time.Time
-	var YValues []float64
+	var XValues_ts []time.Time
+	var YValues_ts []float64
+	var XValues_bs []string
+	YValues_bs := make(map[string][]int)
 	stmt_nbhitsperday := prepdb["stmt_nbhitsperday"]
 	rows, err := stmt_nbhitsperday.Query()
 	if err != nil {
@@ -427,12 +375,38 @@ func overviewgraphs(args args, prepdb map[string]*sql.Stmt) bool {
 		if err := rows.Scan(&aantalhits, &datum, &avgepoch); err != nil {
 			fmt.Printf("%s\n", err.Error())
 		}
-		golangtime := time.Unix(int64(avgepoch),0)
-		XValues = append(XValues, golangtime)
-		YValues = append(YValues, float64(aantalhits))
+		golangtime := time.Unix(int64(avgepoch), 0)
+		XValues_ts = append(XValues_ts, golangtime)
+		YValues_ts = append(YValues_ts, float64(aantalhits))
+		XValues_bs = append(XValues_bs, golangtime.Format("2006-01-02 15:04:05"))
+		YValues_bs["series_A"] = append(YValues_bs["series_A"], aantalhits)
 	}
-	gochart_drawtimeseries(XValues, YValues, args, "Date", "Number of hits", "NbHitsPerDay.png", "NbHitsPerDay.html", "Number of hits per day", "The number of raw hits per day")
+	gochart_drawtimeseries(XValues_ts, YValues_ts, args, "Date", "Number of hits", "NbHitsPerDay.png", "NbHitsPerDay.html", "Number of hits per day", "The number of raw hits per day")
+	createBarChart_XString_Yint(XValues_bs, YValues_bs, "blah", "more blah", args, "bar.html")
 	return true
+}
+
+func generateBarItems() []opts.BarData {
+	items := make([]opts.BarData, 0)
+	for i := 0; i < 6; i++ {
+		items = append(items, opts.BarData{Value: rand.Intn(500)})
+	}
+	return items
+}
+
+func createBarChart_XString_Yint(XValues []string, YValues map[string][]int, title string, subtitle string, args args, filename string) {
+	bar := charts.NewBar()
+
+	bar.SetGlobalOptions(charts.WithTitleOpts(opts.Title{
+		Title:    title,
+		Subtitle: subtitle,
+	}))
+
+	bar.SetXAxis(XValues).
+		AddSeries("Category A", generateBarItems()).
+		AddSeries("Category B", generateBarItems())
+	f, _ := os.Create(args.outputpad + filename)
+	_ = bar.Render(f)
 }
 
 func gochart_drawtimeseries(XValues []time.Time, YValues []float64, args args, xtitle string, ytitle string, outputfilename_image string, outputfilename_html string, htmltitle string, description string) {
@@ -444,25 +418,24 @@ func gochart_drawtimeseries(XValues []time.Time, YValues []float64, args args, x
 			},
 		},
 		XAxis: chart.XAxis{
-            Name:      xtitle,
-            NameStyle: chart.StyleShow(),
-            Style:     chart.StyleShow(),
-        },
-        YAxis: chart.YAxis{
-            Name:      ytitle,
-            NameStyle: chart.StyleShow(),
-            Style:     chart.StyleShow(),
-        },
+			Name:      xtitle,
+			NameStyle: chart.StyleShow(),
+			Style:     chart.StyleShow(),
+		},
+		YAxis: chart.YAxis{
+			Name:      ytitle,
+			NameStyle: chart.StyleShow(),
+			Style:     chart.StyleShow(),
+		},
 	}
 
 	f, _ := os.Create(args.outputpad + outputfilename_image)
 	defer f.Close()
 	graph.Render(chart.PNG, f)
 
-
-	myHtmlInput := timeseriesplot_html {
-		Title: htmltitle,
-		Img: outputfilename_image,
+	myHtmlInput := timeseriesplot_html{
+		Title:       htmltitle,
+		Img:         outputfilename_image,
 		Description: description,
 	}
 	t, err := template.New("mytemplate").Parse(timeseriesplot_tmpl)
@@ -478,8 +451,6 @@ func gochart_drawtimeseries(XValues []time.Time, YValues []float64, args args, x
 		panic(err)
 	}
 	defer outputHTMLFile.Close()
-
-
 }
 
 func main() {
@@ -487,23 +458,16 @@ func main() {
 	runtime.ReadMemStats(&memStats)
 	//fmt.Printf("runtime memstats begin of proces %+v\n", memStats.Alloc)
 	args := parseargs()
-	//fmt.Printf("starting with parameters %+v\n", args)
 	runtime.ReadMemStats(&memStats)
-	//fmt.Printf("runtime memstats after argument parsing %+v\n", memStats.Alloc)
 	db := createdb(args.dbpad)
 	defer db.Close()
 	tx := initialisedb(db)
 	runtime.ReadMemStats(&memStats)
-	//fmt.Printf("runtime memstats after initilialising db %+v\n", memStats.Alloc)
 	prepdb := prepstatements(tx, args)
 	runtime.ReadMemStats(&memStats)
-	//fmt.Printf("runtime memstats after prep statements %+v\n", memStats.Alloc)
 	visitors := getdetailedstats_andfillstructs(args, prepdb)
 	visitgraphs(visitors, args)
-	overviewgraphs(args,prepdb)
+	overviewgraphs(args, prepdb)
 	tx.Commit()
 	runtime.ReadMemStats(&memStats)
-	//fmt.Printf("runtime memstats end of proces %+v\n", memStats.Alloc)
-	//createBarChart()
-	//drawdraw()
 }
