@@ -356,12 +356,17 @@ func getdetailedstats_andfillstructs(args args, prepdb map[string]*sql.Stmt) map
 	if err := rows.Err(); err != nil {
 		fmt.Printf("%s\n", err.Error())
 	}
-	t, err := template.New("mytemplate").Parse(table_tmpl)
+	createtable(args, "detailed_visitor_log.html", "Detailed visitor Log", myTable)
+	return visitorlog
+}
+
+func createtable (args args, htmlfile string, htmltitle string, myTable Table) {
+t, err := template.New("mytemplate").Parse(table_tmpl)
 	if err != nil {
 		panic(err)
 	}
 	var outputHTMLFile *os.File
-	if outputHTMLFile, err = os.Create(args.outputpad + "detailed_visitor_log.html"); err != nil {
+	if outputHTMLFile, err = os.Create(args.outputpad + htmlfile); err != nil {
 		panic(err)
 	}
 
@@ -371,17 +376,12 @@ func getdetailedstats_andfillstructs(args args, prepdb map[string]*sql.Stmt) map
 	defer outputHTMLFile.Close()
 	
 	MyPageForIndex := page_forindex{
-    Title: "Detailed visitor Log",
-    Url:       "detailed_visitor_log.html",
+    Title: htmltitle,
+    Url:       htmlfile,
 	}
 	indexpages = append(indexpages, MyPageForIndex)
-	
-	return visitorlog
 }
 
-func visitgraphs(map[int]Visitor, args) bool {
-	return true
-}
 
 func overview_nbhits_total_last4weeks(args args, prepdb map[string]*sql.Stmt) bool {
 
@@ -442,27 +442,7 @@ func overview_nbhits_total_last4weeks(args args, prepdb map[string]*sql.Stmt) bo
 	
 	gochart_drawtimeseries(XValues_ts, YValues_ts, args, "Date", "Number of hits", "NbHitsPerDay.png", "NbHitsPerDay.html", "Number of hits per day", "The number of raw hits per day")
 	createBarChart_XString_Yint(XValues_bs, YValues_bs, "hits per day over the last 4 weeks", "day by day comparison of the number of hits for the last 4 weeks", args, "nb_hits_comparison_4_weeks.html")
-	
-	t, err := template.New("mytemplate").Parse(table_tmpl)
-	if err != nil {
-		panic(err)
-	}
-	var outputHTMLFile *os.File
-	if outputHTMLFile, err = os.Create(args.outputpad + "NbRawHitsPerDay.html"); err != nil {
-		panic(err)
-	}
-
-	if err = t.Execute(outputHTMLFile, myTable); err != nil {
-		panic(err)
-	}
-	defer outputHTMLFile.Close()
-	
-	MyPageForIndex := page_forindex{
-    Title: "Number of Raw hits per day",
-    Url:       "NbRawHitsPerDay.html",
-	}
-	indexpages = append(indexpages, MyPageForIndex)
-	
+	createtable(args, "NbRawHitsPerDay.html", "Number of Raw hits per day", myTable)
 	return true
 }
 
@@ -539,25 +519,7 @@ func gochart_drawtimeseries(XValues []time.Time, YValues []float64, args args, x
 	indexpages = append(indexpages, MyPageForIndex)
 }
 
-func main() {
-	var memStats runtime.MemStats
-	runtime.ReadMemStats(&memStats)
-	//fmt.Printf("runtime memstats begin of proces %+v\n", memStats.Alloc)
-	args := parseargs()
-	runtime.ReadMemStats(&memStats)
-	db := createdb(args.dbpad)
-	defer db.Close()
-	tx := initialisedb(db)
-	runtime.ReadMemStats(&memStats)
-	prepdb := prepstatements(tx, args)
-	runtime.ReadMemStats(&memStats)
-	visitors := getdetailedstats_andfillstructs(args, prepdb)
-	visitgraphs(visitors, args)
-	overview_nbhits_total_last4weeks(args, prepdb)
-	tx.Commit()
-	runtime.ReadMemStats(&memStats)
-	//fmt.Printf("%+v", indexpages)
-	
+func createindex(args args) {
 	t, err := template.New("mytemplate").Parse(html_index)
 	if err != nil {
 		panic(err)
@@ -571,6 +533,28 @@ func main() {
 		panic(err)
 	}
 	defer outputHTMLFile.Close()
+}
+
+func main() {
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+	//fmt.Printf("runtime memstats begin of proces %+v\n", memStats.Alloc)
+	args := parseargs()
+	runtime.ReadMemStats(&memStats)
+	db := createdb(args.dbpad)
+	defer db.Close()
+	tx := initialisedb(db)
+	runtime.ReadMemStats(&memStats)
+	prepdb := prepstatements(tx, args)
+	runtime.ReadMemStats(&memStats)
+	//visitors := getdetailedstats_andfillstructs(args, prepdb)
+	_ = getdetailedstats_andfillstructs(args, prepdb)
+	overview_nbhits_total_last4weeks(args, prepdb)
+	tx.Commit()
+	runtime.ReadMemStats(&memStats)
+	//fmt.Printf("%+v", indexpages)
+	createindex(args)
+	
 	
 	
 }
