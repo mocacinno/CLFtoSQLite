@@ -10,12 +10,13 @@ import (
 	"github.com/wcharczuk/go-chart"
 	"gopkg.in/ini.v1"
 	"html/template"
-	"math/rand"
+	//"math/rand"
 	"os"
 	"regexp"
 	"runtime"
 	"strconv"
 	"time"
+	//"reflect"
 )
 
 type Table struct {
@@ -233,7 +234,7 @@ func prepstatements(tx *sql.Tx, args args) map[string]*sql.Stmt {
 	/*
 		number of raw visitors per day
 	*/
-	query_nbhitsperday := "select count(*), date(visit_timestamp, 'unixepoch'), max(visit_timestamp) from visit group by date(visit_timestamp, 'unixepoch')"
+	query_nbhitsperday := "select count(*), date(visit_timestamp, 'unixepoch'), max(visit_timestamp) from visit group by date(visit_timestamp, 'unixepoch') order by visit_timestamp desc"
 	stmt_nbhitsperday, err := tx.Prepare(query_nbhitsperday)
 	if err != nil {
 		fmt.Printf("%s\n", err.Error())
@@ -367,8 +368,16 @@ func overviewgraphs(args args, prepdb map[string]*sql.Stmt) bool {
 	}
 	defer rows.Close()
 	rownum := 0
+	weeknum := 0
 	for rows.Next() {
 		rownum = rownum + 1
+		if (rownum > 6) {
+			rownum = 0
+			weeknum++
+		}
+		if (weeknum > 4) {
+			continue;
+		}
 		var aantalhits int
 		var datum string
 		var avgepoch int
@@ -377,34 +386,32 @@ func overviewgraphs(args args, prepdb map[string]*sql.Stmt) bool {
 		}
 		golangtime := time.Unix(int64(avgepoch), 0)
 		XValues_ts = append(XValues_ts, golangtime)
-		YValues_ts = append(YValues_ts, float64(aantalhits))
-		XValues_bs = append(XValues_bs, golangtime.Format("2006-01-02 15:04:05"))
-		YValues_bs["series_A"] = append(YValues_bs["series_A"], aantalhits)
+		YValues_ts = append(YValues_ts, float64(aantalhits)) 
+		YValues_bs["week " + strconv.Itoa(weeknum)] = append(YValues_bs["week " + strconv.Itoa(weeknum)], aantalhits)
 	}
+	
+	for i := 1; i < 8; i++ {
+		XValues_bs = append(XValues_bs, strconv.Itoa(rownum))
+	}
+	
 	gochart_drawtimeseries(XValues_ts, YValues_ts, args, "Date", "Number of hits", "NbHitsPerDay.png", "NbHitsPerDay.html", "Number of hits per day", "The number of raw hits per day")
-	createBarChart_XString_Yint(XValues_bs, YValues_bs, "blah", "more blah", args, "bar.html")
+	createBarChart_XString_Yint(XValues_bs, YValues_bs, "hits per day over the last 4 weeks", "day by day comparison of the number of hits for the last 4 weeks", args, "nb_hits_comparison_4_weeks.html")
 	return true
-}
-
-func generateBarItems() []opts.BarData {
-	items := make([]opts.BarData, 0)
-	for i := 0; i < 6; i++ {
-		items = append(items, opts.BarData{Value: rand.Intn(500)})
-	}
-	return items
 }
 
 func createBarChart_XString_Yint(XValues []string, YValues map[string][]int, title string, subtitle string, args args, filename string) {
 	bar := charts.NewBar()
-
 	bar.SetGlobalOptions(charts.WithTitleOpts(opts.Title{
 		Title:    title,
 		Subtitle: subtitle,
 	}))
-
-	bar.SetXAxis(XValues).
-		AddSeries("Category A", generateBarItems()).
-		AddSeries("Category B", generateBarItems())
+	for serienaam, serievalues := range YValues {
+		items := make([]opts.BarData, 0)
+		for _, serievalue := range serievalues {
+			items = append(items, opts.BarData{Value: serievalue})
+		}		
+		bar.SetXAxis(XValues).AddSeries(serienaam, items)
+	}
 	f, _ := os.Create(args.outputpad + filename)
 	_ = bar.Render(f)
 }
