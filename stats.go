@@ -25,9 +25,11 @@ import (
 html templates
 */
 const timeseriesplot_tmpl = `
-<h1>{{.Title}}</h1>
-<p>{{.Description}}</p>
-<img src="{{.Img}}">
+<html>
+	<h1>{{.Title}}</h1>
+	<p>{{.Description}}</p>
+	<img src="{{.Img}}">
+</html>
 `
 
 const table_tmpl = `<!DOCTYPE html>
