@@ -22,7 +22,7 @@ jobs:
         go-version: 1.19
 
     - name: Build
-      run: go build -v /home/runner/work/CLFtoSQLite/CLFtoSQLite/logparser.go && go build -v /home/runner/work/CLFtoSQLite/CLFtoSQLite/stats.go
+      run: go build -v ./...
 
     - name: Test
-      run: go test -v /home/runner/work/CLFtoSQLite/CLFtoSQLite/logparser.go && go test -v /home/runner/work/CLFtoSQLite/CLFtoSQLite/stats.go
+      run: go test -v ./...
