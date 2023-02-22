@@ -288,6 +288,14 @@ func prepstatements(tx *sql.Tx, args args) map[string]*sql.Stmt {
 	}
 	listitems["stmt_nbhitsperday"] = stmt_nbhitsperday
 
+	query_nbuniquesperday := "select count(distinct(user)), date(visit_timestamp, 'unixepoch'), max(visit_timestamp) from visit group by date(visit_timestamp, 'unixepoch') order by visit_timestamp desc"
+	stmt_nbuniquesperday, err := tx.Prepare(query_nbuniquesperday)
+	if err != nil {
+		fmt.Printf("%s\n", err.Error())
+		os.Exit(1)
+	}
+	listitems["stmt_nbuniquesperday"] = stmt_nbuniquesperday
+
 	return listitems
 }
 
@@ -559,6 +567,68 @@ func createindex(args args) {
 	defer outputHTMLFile.Close()
 }
 
+func overview_nbuniques_total_last4weeks(args args, prepdb map[string]*sql.Stmt) bool {
+
+	MyHeaders := map[string]string{
+		"Title_1": "date",
+		"Title_2": "number of uniques per day",
+	}
+	myTable := Table{
+		Pagetitle:       "number of unique visitors per day",
+		Pagedescription: "this table show the total of unique visitors per day",
+		Headers:         MyHeaders,
+		Data:            []map[string]string{},
+	}
+
+	var XValues_ts []time.Time
+	var YValues_ts []float64
+	var XValues_bs []string
+	YValues_bs := make(map[string][]int)
+	stmt_nbuniquesperday := prepdb["stmt_nbuniquesperday"]
+	rows, err := stmt_nbuniquesperday.Query()
+	if err != nil {
+		fmt.Printf("%s\n", err.Error())
+	}
+	defer rows.Close()
+	rownum := 0
+	weeknum := 0
+	for rows.Next() {
+		rownum = rownum + 1
+		if rownum > 6 {
+			rownum = 0
+			weeknum++
+		}
+		if weeknum > 4 {
+			continue
+		}
+		var aantalhits int
+		var datum string
+		var avgepoch int
+		if err := rows.Scan(&aantalhits, &datum, &avgepoch); err != nil {
+			fmt.Printf("%s\n", err.Error())
+		}
+		golangtime := time.Unix(int64(avgepoch), 0)
+		XValues_ts = append(XValues_ts, golangtime)
+		YValues_ts = append(YValues_ts, float64(aantalhits))
+		YValues_bs["week "+strconv.Itoa(weeknum)] = append(YValues_bs["week "+strconv.Itoa(weeknum)], aantalhits)
+
+		MyData := map[string]string{
+			"Value_1": golangtime.Format("2006-01-02"),
+			"Value_2": strconv.Itoa(aantalhits),
+		}
+		myTable.Data = append(myTable.Data, MyData)
+	}
+
+	for i := 1; i < 8; i++ {
+		XValues_bs = append(XValues_bs, strconv.Itoa(rownum))
+	}
+
+	gochart_drawtimeseries(XValues_ts, YValues_ts, args, "Date", "Number of uniques", "NbUniquesPerDay.png", "NbUniquesPerDay.html", "Number of uniques per day", "The number of unique visitors per day")
+	createBarChart_XString_Yint(XValues_bs, YValues_bs, "unique visitors per day over the last 4 weeks", "day by day comparison of the number of unique visitors for the last 4 weeks", args, "nb_unique_visitors_comparison_4_weeks.html")
+	createtable(args, "NbUniquehitsHitsPerDay.html", "Number of Unique visitors per day", myTable)
+	return true
+}
+
 func main() {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
@@ -574,6 +644,7 @@ func main() {
 	//visitors := getdetailedstats_andfillstructs(args, prepdb)
 	_ = getdetailedstats_andfillstructs(args, prepdb)
 	overview_nbhits_total_last4weeks(args, prepdb)
+	overview_nbuniques_total_last4weeks(args, prepdb)
 	tx.Commit()
 	runtime.ReadMemStats(&memStats)
 	createindex(args)
