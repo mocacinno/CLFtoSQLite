@@ -23,7 +23,7 @@ jobs:
 
     - name: Build
 #      run: go build -v ./...
-      run: go run -v logparser.go
+      run: ls -ltrh
 
 
 #    - name: Test
