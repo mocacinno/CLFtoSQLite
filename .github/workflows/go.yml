@@ -17,6 +17,7 @@ jobs:
     - uses: actions/checkout@v3
     - uses: actions/cache@v3
       with: 
+        path: '**/vendor'
         key: ${{ runner.os }}-modules-${{ hashFiles('**/go.mod') }}
 
     - name: Set up Go
