@@ -1,5 +1,7 @@
 package main
-
+/*
+imports
+*/
 import (
 	"database/sql"
 	"flag"
@@ -19,35 +21,9 @@ import (
 	//"reflect"
 )
 
-type Table struct {
-	Pagetitle       string
-	Pagedescription string
-	Headers         map[string]string
-	Data            []map[string]string
-}
-
-type Visit struct {
-	id         int
-	referrer   string
-	request    string
-	timestamp  int
-	statuscode int
-	httpsize   int
-}
-
-type Visitor struct {
-	visitor_id int
-	ip         string
-	useragent  string
-	visit      []Visit
-}
-
-type timeseriesplot_html struct {
-	Title       string
-	Img         string
-	Description string
-}
-
+/*
+html templates
+*/
 const timeseriesplot_tmpl = `
 <h1>{{.Title}}</h1>
 <p>{{.Description}}</p>
@@ -102,6 +78,48 @@ const table_tmpl = `<!DOCTYPE html>
 	</body>
 </html>`
 
+const html_index = `<!DOCTYPE html>
+<html>
+	<body>
+				{{range .}}
+				<p>{{.Textpre}}<a href="{{.Url}}">{{.Title}}</a>{{.Textpost}}</p>
+				{{end}}
+	</body>
+</html>`
+
+/*
+structs
+*/
+
+type Table struct {
+	Pagetitle       string
+	Pagedescription string
+	Headers         map[string]string
+	Data            []map[string]string
+}
+
+type Visit struct {
+	id         int
+	referrer   string
+	request    string
+	timestamp  int
+	statuscode int
+	httpsize   int
+}
+
+type Visitor struct {
+	visitor_id int
+	ip         string
+	useragent  string
+	visit      []Visit
+}
+
+type timeseriesplot_html struct {
+	Title       string
+	Img         string
+	Description string
+}
+
 type args struct {
 	outputpad                string
 	dbpad                    string
@@ -125,17 +143,15 @@ type page_forindex struct {
 	Textpost string
 }
 
+/*
+globals
+*/
 var indexpages []page_forindex
 
-const html_index = `<!DOCTYPE html>
-<html>
-	<body>
-				{{range .}}
-				<p>{{.Textpre}}<a href="{{.Url}}">{{.Title}}</a>{{.Textpost}}</p>
-				{{end}}
-	</body>
-</html>`
 
+/*
+functions
+*/
 func parseargs() args {
 	var output args
 	padPtr := flag.String("outputpath", `./output`, "the output path")
@@ -558,7 +574,6 @@ func main() {
 	overview_nbhits_total_last4weeks(args, prepdb)
 	tx.Commit()
 	runtime.ReadMemStats(&memStats)
-	//fmt.Printf("%+v", indexpages)
 	createindex(args)
 
 }
