@@ -631,22 +631,18 @@ func overview_nbuniques_total_last4weeks(args args, prepdb map[string]*sql.Stmt)
 
 func main() {
 	var memStats runtime.MemStats
-	runtime.ReadMemStats(&memStats)
-	//fmt.Printf("runtime memstats begin of proces %+v\n", memStats.Alloc)
 	args := parseargs()
-	runtime.ReadMemStats(&memStats)
 	db := createdb(args.dbpad)
 	defer db.Close()
 	tx := initialisedb(db)
-	runtime.ReadMemStats(&memStats)
 	prepdb := prepstatements(tx, args)
-	runtime.ReadMemStats(&memStats)
 	//visitors := getdetailedstats_andfillstructs(args, prepdb)
 	_ = getdetailedstats_andfillstructs(args, prepdb)
 	overview_nbhits_total_last4weeks(args, prepdb)
 	overview_nbuniques_total_last4weeks(args, prepdb)
 	tx.Commit()
 	runtime.ReadMemStats(&memStats)
+	fmt.Printf("runtime memstats begin of proces %+v\n", memStats.Alloc)
 	createindex(args)
 
 }
