@@ -1,5 +1,7 @@
 # CLFtoSQLite
 
+[![Go](https://github.com/mocacinno/CLFtoSQLite/actions/workflows/go.yml/badge.svg)](https://github.com/mocacinno/CLFtoSQLite/actions/workflows/go.yml) [![issues - CLFtoSQLite](https://img.shields.io/github/issues/Mocacinno/CLFtoSQLite)](https://github.com/Mocacinno/CLFtoSQLite/issues)  
+[![GitHub release](https://img.shields.io/github/release/Mocacinno/CLFtoSQLite?include_prereleases=&sort=semver&color=blue)](https://github.com/Mocacinno/CLFtoSQLite/releases/) [![License](https://img.shields.io/badge/License-apache2.0-blue)](#license) [![Made with Go](https://img.shields.io/badge/Go-1-blue?logo=go&logoColor=white)](https://golang.org "Go to Go homepage") [![OS - Linux](https://img.shields.io/badge/OS-Linux-blue?logo=linux&logoColor=white)](https://www.linux.org/ "Go to Linux homepage") [![Made with SQLite](https://img.shields.io/badge/SQLite-3-blue?logo=sqlite&logoColor=white)](https://www.sqlite.org/index.html "Go to SQLite homepage")  
 **important: this project is currently in pre-alpha... Some parts work, others don't!!! It's useless to open issues at this point since everything is a work in progress!!!**  
 combined logfile from apache parsing, putting all data in sqlite and visualising said data
 
@@ -8,7 +10,7 @@ combined logfile from apache parsing, putting all data in sqlite and visualising
 I had an apache webserver running... All default... Combined log format... And i wanted some stats.  
 In the open source world, i ended up with 3 choices:  
 
-* awstats 
+* awstats
 * webalizer
 * goaccess
 
@@ -22,7 +24,6 @@ So i tought to myself: why not add one more :smile:
 ### Built With
 
 golang
-
 
 ## Getting Started
 
