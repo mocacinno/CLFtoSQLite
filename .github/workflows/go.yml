@@ -22,9 +22,4 @@ jobs:
         go-version: 1.19
 
     - name: Build
-#      run: go build -v ./...
       run: go build -v ./stats.go && go build -v ./logfileparser.go
-
-
-#    - name: Test
-#      run: go test -v ./...
