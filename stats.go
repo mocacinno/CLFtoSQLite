@@ -136,6 +136,7 @@ type args struct {
 	ignoredreferrers         []string
 	ignoredrequests          []string
 	mydomain                 string
+	nodetailedstats			 bool
 }
 
 type page_forindex struct {
@@ -170,6 +171,7 @@ func parseargs() args {
 	ignorevisitorips := flag.String("ignore_visitor_ips", `^127\.0\.0\1$`, "ignore this ip. If you want to ignore multipe ips: use a configfile!")
 	ignoredrequests := flag.String("ignore_requests", `robots\.txt$`, "ignore this request. If you want to ignore multipe requests: use a configfile!")
 	configfilePtr := flag.String("config", `none`, "complete path to the config file")
+	nodetailedstatsPtr := flag.Bool("nodetailedstats", false, "if you set this boolean parameter, the detailed stats table will be skipped... This stat takes up most of the time and memory consumption. Skipping this will dramatically speed up the stats process!")
 	flag.Parse()
 	flag_configfile := *configfilePtr
 	var ignorevisitorips_list []string
@@ -201,6 +203,7 @@ func parseargs() args {
 		output.number_of_days_per_day, _ = cfg.Section("output").Key("number_of_days_per_day").Int()
 		output.number_of_days_per_week, _ = cfg.Section("output").Key("number_of_days_per_week").Int()
 		output.number_of_days_per_month, _ = cfg.Section("output").Key("number_of_days_per_month").Int()
+		output.nodetailedstats, _ = cfg.Section("output").Key("nodetailedstats").Bool()
 		for _, ignoredip := range cfg.Section("ignorevisitorips").Keys() {
 			ignorevisitorips_list = append(ignorevisitorips_list, ignoredip.String())
 		}
@@ -238,6 +241,7 @@ func parseargs() args {
 		output.ignoredreferrers = ignoredreferrers_list
 		ignoredrequests_list = append(ignoredrequests_list, *ignoredrequests)
 		output.ignoredrequests = ignoredrequests_list
+		output.nodetailedstats = *nodetailedstatsPtr
 	}
 	return output
 }
@@ -637,7 +641,10 @@ func main() {
 	tx := initialisedb(db)
 	prepdb := prepstatements(tx, args)
 	//visitors := getdetailedstats_andfillstructs(args, prepdb)
-	_ = getdetailedstats_andfillstructs(args, prepdb)
+	if (!args.nodetailedstats) {
+		_ = getdetailedstats_andfillstructs(args, prepdb)
+	}
+	
 	overview_nbhits_total_last4weeks(args, prepdb)
 	overview_nbuniques_total_last4weeks(args, prepdb)
 	tx.Commit()
