@@ -373,14 +373,6 @@ func insertrow(prepdb map[string]*sql.Stmt, ip string, datumtijd string, method 
 		fmt.Printf("Can't parse time format")
 	}
 	epoch := thetime.Unix()
-	/*
-		visit_hour, visit_minute, visit_second := thetime.Clock()
-		visit_year := thetime.Year()
-		visit_month := thetime.Month()
-		visit_day := thetime.Day()
-	*/
-	//fmt.Printf("\nDEBUG: ik heb timestamp %s en verwacht formaat %s. Ik haal hieruit %d/%d/%d %d:%d:%d en maakte hiervan de unix timestamp %d\n", datumtijd, longForm, visit_day, visit_month, visit_year, visit_hour, visit_minute, visit_second, epoch)
-
 	if int(epoch) > maxtimestamp {
 		stmt_countusers := prepdb["stmt_countusers"]
 		var numberofusers int
@@ -391,7 +383,6 @@ func insertrow(prepdb map[string]*sql.Stmt, ip string, datumtijd string, method 
 			//user already exists... get his id :)
 			stmt_selectuserid := prepdb["stmt_selectuserid"]
 			stmt_selectuserid.QueryRow(ip, useragent).Scan(&userid)
-			//fmt.Printf("user already exists with userid %d\n", userid)
 		} else {
 			//user does not exist... create the bugger
 			stmt_insertuser := prepdb["stmt_insertuser"]
@@ -403,7 +394,6 @@ func insertrow(prepdb map[string]*sql.Stmt, ip string, datumtijd string, method 
 			var id64 int64
 			id64, err = stmt_insertuser_result.LastInsertId()
 			userid = int(id64)
-			//fmt.Printf("created a new user and assigned id %d\n", userid)
 		}
 
 		/*
@@ -416,7 +406,6 @@ func insertrow(prepdb map[string]*sql.Stmt, ip string, datumtijd string, method 
 		if numberofrequests > 0 {
 			stmt_selectrequestid := prepdb["stmt_selectrequestid"]
 			stmt_selectrequestid.QueryRow(request).Scan(&requestid)
-			//fmt.Printf("request already exists with requestid %d\n", requestid)
 		} else {
 			stmt_insertrequest := prepdb["stmt_insertrequest"]
 
@@ -428,7 +417,6 @@ func insertrow(prepdb map[string]*sql.Stmt, ip string, datumtijd string, method 
 			var id64 int64
 			id64, err = stmt_insertrequest_result.LastInsertId()
 			requestid = int(id64)
-			//fmt.Printf("created a new request and assigned id %d\n", requestid)
 		}
 
 		/*
@@ -441,7 +429,6 @@ func insertrow(prepdb map[string]*sql.Stmt, ip string, datumtijd string, method 
 		if numberofreferrers > 0 {
 			stmt_selectreferrerid := prepdb["stmt_selectreferrerid"]
 			stmt_selectreferrerid.QueryRow(referrer).Scan(&referrerid)
-			//fmt.Printf("referrer already exists with referrerid %d\n", referrerid)
 		} else {
 			stmt_insertreferrer := prepdb["stmt_insertreferrer"]
 			stmt_insertreferrer_result, err := stmt_insertreferrer.Exec(referrer)
@@ -452,15 +439,16 @@ func insertrow(prepdb map[string]*sql.Stmt, ip string, datumtijd string, method 
 			var id64 int64
 			id64, err = stmt_insertreferrer_result.LastInsertId()
 			referrerid = int(id64)
-			//fmt.Printf("created a new refferer and assigned id %d\n", referrerid)
 		}
 		/*
 			get max timestamp of current db and insert newer records
 		*/
 		stmt_insertvisit := prepdb["stmt_insertvisit"]
-		stmt_insertvisit.Exec(referrerid, requestid, int(epoch), userid, returncode, httpsize)
-	}
-
+		_, err := stmt_insertvisit.Exec(referrerid, requestid, int(epoch), userid, returncode, httpsize)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} 
 }
 
 func getmaxvisittimestamp(prepdb map[string]*sql.Stmt) int {
@@ -505,6 +493,7 @@ func main() {
 	tx := initialisedb(db)
 	prepdb := prepstatements(tx)
 	maxvisittimestamp := getmaxvisittimestamp(prepdb)
+	fmt.Printf("only records with a timestamp BIGGER THAN %d will be imported into the database\n", maxvisittimestamp)
 	var scanner *bufio.Scanner
 
 	fmt.Printf("we're going to parse all files that look like %s in path %s\n", arguments.filename, arguments.padname)
@@ -535,6 +524,9 @@ func main() {
 		InsertParsedFileHashIntoDb(filename, arguments.padname, prepdb)
 
 	}
-	tx.Commit()
+	err := tx.Commit()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 }

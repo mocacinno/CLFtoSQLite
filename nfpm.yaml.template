@@ -23,6 +23,8 @@ contents:
   dst: /usr/bin/stats
 - src: ./builds/logfileparser
   dst: /usr/bin/logfileparser
+- src: ./config.template.ini
+  dst: /etc/CLFtoSQLite/config.ini
 - src: /usr/bin/stats
   dst: /sbin/clftosqlite_stats
   type: symlink
