@@ -1,0 +1,31 @@
+# nfpm example configuration file
+#
+# check https://nfpm.goreleaser.com/configuration for detailed usage
+#
+name: "CLFtoSQLite"
+arch: "amd64"
+platform: "linux"
+version: "vmyversion"
+section: "default"
+priority: "extra"
+provides:
+- stats
+- logfileparser
+maintainer: "Mocacinno <mocacinno@gmx.com>"
+description: |
+  CLFtoSQLite is a simple apache combined logfile parser
+    The data is stored in a SQLite database and simple statistics are included
+vendor: "Mocacinno"
+homepage: "https://github.com/mocacinno/CLFtoSQLite"
+license: "apache2.0"
+contents:
+- src: ./builds/stats
+  dst: /usr/bin/stats
+- src: ./builds/logfileparser
+  dst: /usr/bin/logfileparser
+- src: /usr/bin/stats
+  dst: /sbin/clftosqlite_stats
+  type: symlink
+- src: /usr/bin/logfileparser
+  dst: /sbin/clftosqlite_logfileparser
+  type: symlink
