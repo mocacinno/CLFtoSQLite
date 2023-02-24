@@ -67,7 +67,7 @@ func parseargs() args {
 		}
 		if _, err := os.Stat("/etc/CLFtoSQLite/config.ini"); err == nil {
 			fmt.Printf("config file was not entered, but i found a config.ini file: /etc/CLFtoSQLite/config.ini... using that one\n")
-			flag_configfile = "config.ini"
+			flag_configfile = "/etc/CLFtoSQLite/config.ini"
 		}
 	}
 	if flag_configfile != `none` {
