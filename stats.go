@@ -483,7 +483,7 @@ func overview_nbhits_total_last4weeks(args args, prepdb map[string]*sql.Stmt) bo
 }
 
 func createBarChart_XString_Yint(XValues []string, YValues map[string][]int, title string, subtitle string, args args, filename string) {
-	fmt.Printf("X values:%+v\nY Values:%+v\n", XValues, YValues)
+	//fmt.Printf("X values:%+v\nY Values:%+v\n", XValues, YValues)
 	bar := charts.NewBar()
 	bar.SetGlobalOptions(charts.WithTitleOpts(opts.Title{
 		Title:    title,

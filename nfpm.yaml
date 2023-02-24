@@ -5,7 +5,7 @@
 name: "CLFtoSQLite"
 arch: "amd64"
 platform: "linux"
-version: "0.05"
+version: "v0.07"
 section: "default"
 priority: "extra"
 provides:
