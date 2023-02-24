@@ -138,6 +138,7 @@ type args struct {
 	ignoredrequests          []string
 	mydomain                 string
 	nodetailedstats          bool
+	assethost				 string
 }
 
 type page_forindex struct {
@@ -170,6 +171,7 @@ func parseargs() args {
 	ignoredreferrers := flag.String("ignore_referrers", `.*localhost.*`, "ignore this referrer. If you want to ignore multipe referrers: use a configfile!")
 	ignorevisitorips := flag.String("ignore_visitor_ips", `^127\.0\.0\1$`, "ignore this ip. If you want to ignore multipe ips: use a configfile!")
 	ignoredrequests := flag.String("ignore_requests", `robots\.txt$`, "ignore this request. If you want to ignore multipe requests: use a configfile!")
+	assethostPtr := flag.String("assethost", `https://go-echarts.github.io/go-echarts-assets/assets/`, "By default, some dynamic graphs will pull the javascript for dynamic graphing from here...")
 	configfilePtr := flag.String("config", `none`, "complete path to the config file")
 	nodetailedstatsPtr := flag.Bool("nodetailedstats", false, "if you set this boolean parameter, the detailed stats table will be skipped... This stat takes up most of the time and memory consumption. Skipping this will dramatically speed up the stats process!")
 	flag.Parse()
@@ -185,7 +187,7 @@ func parseargs() args {
 		}
 		if _, err := os.Stat("/etc/CLFtoSQLite/config.ini"); err == nil {
 			fmt.Printf("config file was not entered, but i found a config.ini file: /etc/CLFtoSQLite/config.ini... using that one\n")
-			flag_configfile = "config.ini"
+			flag_configfile = "/etc/CLFtoSQLite/config.ini"
 		}
 	}
 	if flag_configfile != `none` {
@@ -203,6 +205,7 @@ func parseargs() args {
 		output.number_of_days_per_day, _ = cfg.Section("output").Key("number_of_days_per_day").Int()
 		output.number_of_days_per_week, _ = cfg.Section("output").Key("number_of_days_per_week").Int()
 		output.number_of_days_per_month, _ = cfg.Section("output").Key("number_of_days_per_month").Int()
+		output.assethost = cfg.Section("output").Key("assethost").String()
 		output.nodetailedstats, _ = cfg.Section("output").Key("nodetailedstats").Bool()
 		for _, ignoredip := range cfg.Section("ignorevisitorips").Keys() {
 			ignorevisitorips_list = append(ignorevisitorips_list, ignoredip.String())
@@ -242,6 +245,7 @@ func parseargs() args {
 		ignoredrequests_list = append(ignoredrequests_list, *ignoredrequests)
 		output.ignoredrequests = ignoredrequests_list
 		output.nodetailedstats = *nodetailedstatsPtr
+		output.assethost = *assethostPtr
 	}
 	return output
 }
@@ -500,6 +504,9 @@ func createBarChart_XString_Yint(XValues []string, YValues map[string][]int, tit
 	bar.SetGlobalOptions(
 		charts.WithInitializationOpts(opts.Initialization{
 			PageTitle: title,
+			Width: `95%`,
+			Height: `95%`, 
+			Assethost: args.assethost
 		}),
 		charts.WithLegendOpts(opts.Legend{
 			Show:  true,
