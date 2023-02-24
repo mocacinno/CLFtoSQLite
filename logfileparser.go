@@ -448,7 +448,7 @@ func insertrow(prepdb map[string]*sql.Stmt, ip string, datumtijd string, method 
 		if err != nil {
 			log.Fatal(err)
 		}
-	} 
+	}
 }
 
 func getmaxvisittimestamp(prepdb map[string]*sql.Stmt) int {

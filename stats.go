@@ -1,4 +1,5 @@
 package main
+
 /*
 imports
 */
@@ -136,7 +137,7 @@ type args struct {
 	ignoredreferrers         []string
 	ignoredrequests          []string
 	mydomain                 string
-	nodetailedstats			 bool
+	nodetailedstats          bool
 }
 
 type page_forindex struct {
@@ -150,7 +151,6 @@ type page_forindex struct {
 globals
 */
 var indexpages []page_forindex
-
 
 /*
 functions
@@ -463,7 +463,7 @@ func overview_nbhits_total_last4weeks(args args, prepdb map[string]*sql.Stmt) bo
 		golangtime := time.Unix(int64(avgepoch), 0)
 		XValues_ts = append(XValues_ts, golangtime)
 		YValues_ts = append(YValues_ts, float64(aantalhits))
-		YValues_bs["week "+strconv.Itoa(weeknum)] = append(YValues_bs["week "+strconv.Itoa(weeknum)], aantalhits)
+		YValues_bs[strconv.Itoa(weeknum)+"weeks ago"] = append(YValues_bs[strconv.Itoa(weeknum)+"weeks ago"], aantalhits)
 
 		MyData := map[string]string{
 			"Value_1": golangtime.Format("2006-01-02"),
@@ -488,6 +488,7 @@ func createBarChart_XString_Yint(XValues []string, YValues map[string][]int, tit
 	bar.SetGlobalOptions(charts.WithTitleOpts(opts.Title{
 		Title:    title,
 		Subtitle: subtitle,
+		Top:      "5%",
 	}))
 	for serienaam, serievalues := range YValues {
 		items := make([]opts.BarData, 0)
@@ -496,6 +497,16 @@ func createBarChart_XString_Yint(XValues []string, YValues map[string][]int, tit
 		}
 		bar.SetXAxis(XValues).AddSeries(serienaam, items)
 	}
+	bar.SetGlobalOptions(
+		charts.WithInitializationOpts(opts.Initialization{
+			PageTitle: title,
+		}),
+		charts.WithLegendOpts(opts.Legend{
+			Show:  true,
+			Top:   "10%",
+			Right: "5%",
+		}),
+	)
 	f, _ := os.Create(args.outputpad + filename)
 	_ = bar.Render(f)
 
@@ -615,7 +626,7 @@ func overview_nbuniques_total_last4weeks(args args, prepdb map[string]*sql.Stmt)
 		golangtime := time.Unix(int64(avgepoch), 0)
 		XValues_ts = append(XValues_ts, golangtime)
 		YValues_ts = append(YValues_ts, float64(aantalhits))
-		YValues_bs["week "+strconv.Itoa(weeknum)] = append(YValues_bs["week "+strconv.Itoa(weeknum)], aantalhits)
+		YValues_bs[strconv.Itoa(weeknum)+" weeks ago"] = append(YValues_bs[strconv.Itoa(weeknum)+" weeks ago"], aantalhits)
 
 		MyData := map[string]string{
 			"Value_1": golangtime.Format("2006-01-02"),
@@ -642,10 +653,10 @@ func main() {
 	tx := initialisedb(db)
 	prepdb := prepstatements(tx, args)
 	//visitors := getdetailedstats_andfillstructs(args, prepdb)
-	if (!args.nodetailedstats) {
+	if !args.nodetailedstats {
 		_ = getdetailedstats_andfillstructs(args, prepdb)
 	}
-	
+
 	overview_nbhits_total_last4weeks(args, prepdb)
 	overview_nbuniques_total_last4weeks(args, prepdb)
 	tx.Commit()
