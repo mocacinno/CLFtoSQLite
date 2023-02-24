@@ -473,7 +473,7 @@ func overview_nbhits_total_last4weeks(args args, prepdb map[string]*sql.Stmt) bo
 	}
 
 	for i := 1; i < 8; i++ {
-		XValues_bs = append(XValues_bs, strconv.Itoa(rownum))
+		XValues_bs = append(XValues_bs, strconv.Itoa(i))
 	}
 
 	gochart_drawtimeseries(XValues_ts, YValues_ts, args, "Date", "Number of hits", "NbHitsPerDay.png", "NbHitsPerDay.html", "Number of hits per day", "The number of raw hits per day")
@@ -483,6 +483,7 @@ func overview_nbhits_total_last4weeks(args args, prepdb map[string]*sql.Stmt) bo
 }
 
 func createBarChart_XString_Yint(XValues []string, YValues map[string][]int, title string, subtitle string, args args, filename string) {
+	fmt.Printf("X values:%+v\nY Values:%+v\n", XValues, YValues)
 	bar := charts.NewBar()
 	bar.SetGlobalOptions(charts.WithTitleOpts(opts.Title{
 		Title:    title,
@@ -624,7 +625,7 @@ func overview_nbuniques_total_last4weeks(args args, prepdb map[string]*sql.Stmt)
 	}
 
 	for i := 1; i < 8; i++ {
-		XValues_bs = append(XValues_bs, strconv.Itoa(rownum))
+		XValues_bs = append(XValues_bs, strconv.Itoa(i))
 	}
 
 	gochart_drawtimeseries(XValues_ts, YValues_ts, args, "Date", "Number of uniques", "NbUniquesPerDay.png", "NbUniquesPerDay.html", "Number of uniques per day", "The number of unique visitors per day")
