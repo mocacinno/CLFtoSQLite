@@ -504,9 +504,9 @@ func createBarChart_XString_Yint(XValues []string, YValues map[string][]int, tit
 	bar.SetGlobalOptions(
 		charts.WithInitializationOpts(opts.Initialization{
 			PageTitle: title,
-			Width: `95%`,
-			Height: `95%`, 
-			Assethost: args.assethost
+			Width: `95vw`,
+			Height: `95vh`, 
+			AssetsHost: args.assethost,
 		}),
 		charts.WithLegendOpts(opts.Legend{
 			Show:  true,
